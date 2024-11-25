@@ -240,6 +240,7 @@ function publishToBus(address, data){
 
 
 //TODO:
+//1-add instruction issue, exec and write back
 //1-make a fake main method to test everything and fake link methods
 //2-recheck when address is register address or reservation station addtess or instruction address bec they're all named the same
 //3-check hazards: RAW,WAW,WAR
