@@ -1,6 +1,6 @@
 
 //Initializing basic Hardware
-const InstructionQueue = [];//{operation,operand1,operand2,destination}
+const InstructionQueue = [];//instruction format :{operation,operand1,operand2,destination}
 const cache = [];  //{address,data}
 const RegisterFile = [];//{number,data}
 const memory = [];//{address,data}
@@ -48,7 +48,7 @@ function fetchInstruction() { //Filling the instruction Queue with instructions
 //TODO: Check size of memory
 function InitializingMemory(values){ //values is an array of values
     values.forEach((value, index) => {
-        RegisterFile.push({ number: index, data: value }); // Assign sequential numbers starting from 1
+        memory.push({ number: index, data: value }); // Assign sequential numbers starting from 1
     });
 }
 //---------------------------------------------------------------------------------------------------------
@@ -236,6 +236,105 @@ function publishToBus(address, data){
 }
 //---------------------------------------------------------------------------------------------------------
 
+function issueInstruction() {
+    if (InstructionQueue.length === 0) return; // No instructions to issue
+
+    const instruction = fetchInstruction(); // Get the next instruction
+    const { operation, operand1, operand2, destination } = instruction;
+
+    let issued = false; // Flag to check if the instruction was successfully issued
+
+    // Check the operation type and find the appropriate station
+    if (operation === "ADD" || operation === "SUB") {
+        const index = adderReservationStation.findIndex(entry => entry.busy === 0);
+        if (index !== -1) {
+            adderReservationStation[index] = {
+                busy: 1,
+                operation,
+                Vj: fetchFromRegisterFile(operand1),
+                Vk: fetchFromRegisterFile(operand2),
+                Qj: 0,
+                Qk: 0
+            };
+            issued = true;
+        }
+    } else if (operation === "MUL" || operation === "DIV") {
+        const index = multiplierReservationStation.findIndex(entry => entry.busy === 0);
+        if (index !== -1) {
+            multiplierReservationStation[index] = {
+                busy: 1,
+                operation,
+                Vj: fetchFromRegisterFile(operand1),
+                Vk: fetchFromRegisterFile(operand2),
+                Qj: 0,
+                Qk: 0
+            };
+            issued = true;
+        }
+    } else if (operation === "LOAD") {
+        const index = loadBuffer.findIndex(entry => entry.busy === 0);
+        if (index !== -1) {
+            loadBuffer[index] = { busy: 1, address: operand1 };
+            issued = true;
+        }
+    } else if (operation === "STORE") {
+        const index = storeBuffer.findIndex(entry => entry.busy === 0);
+        if (index !== -1) {
+            storeBuffer[index] = { busy: 1, address: operand1, V: fetchFromRegisterFile(operand2), Q: 0 };
+            issued = true;
+        }
+    } else {
+        console.error("Unsupported operation:", operation);
+    }
+
+    // If the instruction couldn't be issued, add it back to the queue
+    if (!issued) {
+        InstructionQueue.unshift(instruction); // Add it back to the front of the queue
+    }
+}
+
+function execute() {
+    // Execute instructions in Adder Reservation Stations
+    for (let i = 0; i < adderReservationStation.length; i++) {
+        const station = adderReservationStation[i];
+        if (station.busy && station.Qj === 0 && station.Qk === 0) {
+            const result = ALU(station.operation, station.Vj, station.Vk);
+            adderReservationStation[i].result = result; // Store result temporarily
+            adderReservationStation[i].busy = 2; // Execution in progress (latency simulation)
+        }
+    }
+
+    // Execute instructions in Multiplier Reservation Stations
+    for (let i = 0; i < multiplierReservationStation.length; i++) {
+        const station = multiplierReservationStation[i];
+        if (station.busy && station.Qj === 0 && station.Qk === 0) {
+            const result = ALU(station.operation, station.Vj, station.Vk);
+            multiplierReservationStation[i].result = result; // Store result temporarily
+            multiplierReservationStation[i].busy = 3; // Execution in progress (latency simulation)
+        }
+    }
+
+    // Execute Load Buffer
+    for (let i = 0; i < loadBuffer.length; i++) {
+        const buffer = loadBuffer[i];
+        if (buffer.busy && buffer.data == null) { // Data is not yet fetched
+            const memoryData = fetchFromCache(buffer.address); // Simulate memory access
+            loadBuffer[i].data = memoryData; // Fetch the data
+            loadBuffer[i].busy = 2; // Mark as in progress
+        }
+    }
+
+    // Execute Store Buffer
+    for (let i = 0; i < storeBuffer.length; i++) {
+        const buffer = storeBuffer[i];
+        if (buffer.busy && buffer.Q === 0) { // Data is ready for storing
+            const memoryAddress = buffer.address;
+            const value = buffer.V;
+            memory[memoryAddress] = value; // Store value in memory
+            storeBuffer[i].busy = 2; // Mark as in progress
+        }
+    }
+}
 
 
 
