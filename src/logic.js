@@ -336,6 +336,47 @@ function execute() {
     }
 }
 
+function writeBack() {
+    // Check Adder Reservation Stations
+    for (let i = 0; i < adderReservationStation.length; i++) {
+        const station = adderReservationStation[i];
+        if (station.busy === 2) { // Execution completed
+            const { result, destination } = station;
+            publishToBus(destination, result); // Broadcast result on the CDB
+            removeInstructionFromAdderReservationStation(i); // Free the reservation station
+        }
+    }
+
+    // Check Multiplier Reservation Stations
+    for (let i = 0; i < multiplierReservationStation.length; i++) {
+        const station = multiplierReservationStation[i];
+        if (station.busy === 3) { // Execution completed
+            const { result, destination } = station;
+            publishToBus(destination, result); // Broadcast result on the CDB
+            removeInstructionFromMultiplierReservationStation(i); // Free the reservation station
+        }
+    }
+
+    // Check Load Buffer
+    for (let i = 0; i < loadBuffer.length; i++) {
+        const buffer = loadBuffer[i];
+        if (buffer.busy === 2 && buffer.data != null) { // Data ready for write-back
+            const { data, destination } = buffer;
+            publishToBus(destination, data); // Broadcast loaded data on the CDB
+            removeInstructionFromLoadBuffer(i); // Free the load buffer entry
+        }
+    }
+
+    // Check Store Buffer
+    for (let i = 0; i < storeBuffer.length; i++) {
+        const buffer = storeBuffer[i];
+        if (buffer.busy === 2 && buffer.Q === 0) { // Store operation ready for memory write
+            const { address, V } = buffer;
+            memory[address] = V; // Store value to memory
+            storeBuffer[i].busy = 0; // Mark the store buffer entry as free
+        }
+    }
+}
 
 
 //TODO:
