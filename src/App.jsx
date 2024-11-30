@@ -5,6 +5,11 @@ import InstructionSelection from "./components/InstructionSelection";
 import FpRegisterFile from "./components/tables/FP Register File/FpRegisterFile";
 import InstructionQueue from "./components/tables/Instruction Queue/InstructionQueue";
 import Setup from "./components/Setup";
+import IntegerRegisterFile from "./components/tables/Integer Register File/IntegerRegisterFile";
+import AdditionStation from "./components/tables/Addition Station/AdditionStation";
+import MultiplicationStation from "./components/tables/Multiplication Station/MultiplicationStation";
+import LoadBuffer from "./components/tables/Load Buffer/LoadBuffer";
+import StoreBuffer from "./components/tables/Store Buffer/StoreBuffer";
 
 function App() {
     const [instructions, setInstructions] = useState([]);
@@ -21,6 +26,7 @@ function App() {
         store: 2,
     });
     const [page, setPage] = useState(0);
+    const [cycle, setCycle] = useState(0);
 
     function formatInstructions(instructions) {
         const instructionStrings = instructions.map(instruction => {
@@ -69,7 +75,7 @@ function App() {
                     <h1 className="text-3xl">
                         Tomasulo's Algorithm Simulator
                     </h1>
-                    <div className="flex justify-between w-2/3">
+                    <div className="grid grid-cols-3 gap-20 w-2/3">
                         <div>
                             <h2 className="text-xl mb-3">
                                 Enter your program
@@ -80,7 +86,7 @@ function App() {
                             <h2 className="text-xl mb-3">
                                 Instructions
                             </h2>
-                            <div className="flex flex-col gap-2 w-48">
+                            <div className="flex flex-col gap-2">
                                 {formatInstructions(instructions).map((instruction, index) => (
                                     <p key={index}>
                                         {instruction.instruction ? instruction.instruction : `${instruction.label}:`}
@@ -92,7 +98,7 @@ function App() {
                             <h2 className="text-xl mb-3">
                                 Settings
                             </h2>
-                            <Setup />
+                            <Setup stationSizes={stationSizes} setStationSizes={setStationSizes} instructionLatencies={instructionLatencies} setInstructionLatencies={setInstructionLatencies} />
                         </div>
                     </div>
                     <div className="w-2/3">
@@ -103,9 +109,41 @@ function App() {
                 </div>
             }
             {page === 1 &&
-                <div className="flex flex-col gap-12">
-                    <InstructionQueue instructions={instructions} />
-                    <FpRegisterFile />
+                <div className="w-full flex flex-col items-center gap-12 relative">
+                    <h1 className="text-3xl">
+                        Cycle {cycle}
+                    </h1>
+                    <div className="grid grid-cols-10 gap-12">
+                        <div className="flex flex-col gap-12 col-span-4">
+                            <InstructionQueue instructions={instructions} />
+                            <div className="flex gap-12">
+                                <FpRegisterFile />
+                                <IntegerRegisterFile />
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-12 col-span-4">
+                            <AdditionStation stationSizes={stationSizes} />
+                            <MultiplicationStation stationSizes={stationSizes} />
+                            <LoadBuffer stationSizes={stationSizes} />
+                            <StoreBuffer stationSizes={stationSizes} />
+                            {console.log("SIZES:", stationSizes)}
+                        </div>
+                        <div className="col-span-2">
+                            <h2 className="text-xl mb-3">
+                                Program
+                            </h2>
+                            <div className="flex flex-col gap-2">
+                                {formatInstructions(instructions).map((instruction, index) => (
+                                    <p key={index}>
+                                        {instruction.instruction ? instruction.instruction : `${instruction.label}:`}
+                                    </p>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    <Button onClick={() => setCycle(cycle + 1)} className="fixed bottom-8 right-14">
+                        Next Cycle
+                    </Button>
                 </div>
             }
         </div>
