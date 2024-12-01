@@ -8,7 +8,7 @@ function InstructionSelection({ instructions, setInstructions }) {
     const destSrcTgt = ["ADD.S", "ADD.D", "SUB.S", "SUB.D", "MUL.S", "MUL.D", "DIV.S", "DIV.D"];
     const destSrcImm = ["ADDI", "SUBI"];
     const srcTgtLbl = ["BEQ", "BNE"];
-    const srcLbl = ["BEQZ", "BNEZ"];
+    const srcLbl = ["BEQZ", "BNEZ"]; //NOT WANTED
     const srcImm = ["S.S", "S.D", "SW", "SD"];
     const destImm = ["L.S", "L.D", "LW", "LD"];
     const [instruction, setInstruction] = useState({

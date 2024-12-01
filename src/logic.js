@@ -4,6 +4,7 @@ const InstructionQueue = [];//instruction format :{operation,operand1,operand2,d
 const cache = [];  //{address,data}
 const RegisterFile = [];//{number,data}
 const memory = [];//{address,data}
+const writeBackArray =[]; //has all instructions ready to be written
 
 //Initializing reservation stations
 const adderReservationStation=[]; //{busy, operation , Vj, Vk, Qj, Qk}
@@ -39,7 +40,7 @@ function addInstructionToInstructionQueue(instruction) { //Filling the instructi
     InstructionQueue.push(instruction);
 }
 function fetchInstruction() { //Filling the instruction Queue with instructions
-    return InstructionQueue.pop();
+    return InstructionQueue.shift();
 }
 //---------------------------------------------------------------------------------------------------------
 
@@ -236,13 +237,14 @@ function publishToBus(address, data){
 }
 //---------------------------------------------------------------------------------------------------------
 
+//12)Instruction Cycle
 function issueInstruction() {
     if (InstructionQueue.length === 0) return; // No instructions to issue
 
     const instruction = fetchInstruction(); // Get the next instruction
     const { operation, operand1, operand2, destination } = instruction;
 
-    let issued = false; // Flag to check if the instruction was successfully issued
+    let issued = false; // Flag to check if the instruction was successfully issued bec reservation station full
 
     // Check the operation type and find the appropriate station
     if (operation === "ADD" || operation === "SUB") {
@@ -340,9 +342,9 @@ function writeBack() {
     // Check Adder Reservation Stations
     for (let i = 0; i < adderReservationStation.length; i++) {
         const station = adderReservationStation[i];
-        if (station.busy === 2) { // Execution completed
+        if (station.busy === 1) { // Execution completed
             const { result, destination } = station;
-            publishToBus(destination, result); // Broadcast result on the CDB
+            writeBackArray.push({destination, result});
             removeInstructionFromAdderReservationStation(i); // Free the reservation station
         }
     }
@@ -350,9 +352,9 @@ function writeBack() {
     // Check Multiplier Reservation Stations
     for (let i = 0; i < multiplierReservationStation.length; i++) {
         const station = multiplierReservationStation[i];
-        if (station.busy === 3) { // Execution completed
+        if (station.busy === 1) { // Execution completed
             const { result, destination } = station;
-            publishToBus(destination, result); // Broadcast result on the CDB
+            writeBackArray.push({destination, result});
             removeInstructionFromMultiplierReservationStation(i); // Free the reservation station
         }
     }
@@ -360,9 +362,9 @@ function writeBack() {
     // Check Load Buffer
     for (let i = 0; i < loadBuffer.length; i++) {
         const buffer = loadBuffer[i];
-        if (buffer.busy === 2 && buffer.data != null) { // Data ready for write-back
+        if (buffer.busy === 1 && buffer.data != null) { // Data ready for write-back
             const { data, destination } = buffer;
-            publishToBus(destination, data); // Broadcast loaded data on the CDB
+            writeBackArray.push({destination, result});
             removeInstructionFromLoadBuffer(i); // Free the load buffer entry
         }
     }
@@ -370,21 +372,26 @@ function writeBack() {
     // Check Store Buffer
     for (let i = 0; i < storeBuffer.length; i++) {
         const buffer = storeBuffer[i];
-        if (buffer.busy === 2 && buffer.Q === 0) { // Store operation ready for memory write
+        if (buffer.busy === 1 && buffer.Q === 0) { // Store operation ready for memory write
             const { address, V } = buffer;
             memory[address] = V; // Store value to memory
             storeBuffer[i].busy = 0; // Mark the store buffer entry as free
         }
     }
+
+    publishToBus(writeBackArray.shift()); // Broadcast result on the CDB
 }
 
+//---------------------------------------------------------------------------------------------------------
 
 //TODO:
-//1-add instruction issue, exec and write back
-//1-make a fake main method to test everything and fake link methods
-//2-recheck when address is register address or reservation station addtess or instruction address bec they're all named the same
-//3-check hazards: RAW,WAW,WAR
+//1-Instead of popping an inst in fetching, add pc
+//2-Edit instruction format to be based on the instruction(refrence in Instruction Selection)
+//3-change in issue instruction to accomodated rest of operations & check reg file for Gj/k
 //4- add latencies
-    //You can take any assumptions about the cache hit latency and penalty
+    //let busy is the one that keeps track of latency
     //The user should be able to input the latency of each type of instruction before we start simulating
+    //cache miss
 //5- two instructions wish to publish their result on the bus in the same cycle
+
+//make a fake main method to test everything and fake link methods
