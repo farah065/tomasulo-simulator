@@ -8,7 +8,7 @@ const cacheMissPenalty = 2;
 const cache = [];  //{address,data}
 const cacheMiss = false;
 
-const RegisterFile = [];//{number,data}
+const RegisterFile = [];//{waiting,data}
 const memory = [];//{address,data}
 const writeBackArray =[]; //has all instructions ready to be written
 const pc = 0;
@@ -98,12 +98,16 @@ function fetchFromCache(memoryAddress , memoryData){ //Fetching from cache
 //5)RegisterFile
 function InitializingRegisterFile(values){ //values is an array of values
     values.forEach((value, index) => {
-        RegisterFile.push({ number: index, data: value }); // Assign sequential numbers starting from 1
+        RegisterFile.push({ waiting: 0, data: value }); // waiting is the field in which m1 of A0 would be written for example
     });
 }
-function fetchFromRegisterFile(registerNumber){
-    const register = RegisterFile.find(register => register.number === registerNumber);
-    return register.data;
+function fetchFromRegisterFile(registerNumber) {
+    const register = RegisterFile[registerNumber];
+    return { waiting: register.waiting, data: register.data };
+    // if (register) {
+    // } else {
+    //     return null; // Return null if the registerNumber is invalid
+    // }
 }
 
 function writeToRegisterFile(registerNumber, registerData){
@@ -273,6 +277,11 @@ function issueInstruction() {
 
     let issued = false; // Flag to check if the instruction was successfully issued bec reservation station full
 
+    const qj = fetchFromRegisterFile(operand1).waiting;
+    const qk = fetchFromRegisterFile(operand2).waiting;
+    const vj = fetchFromRegisterFile(operand1).data;
+    const vk = fetchFromRegisterFile(operand2).data;
+    const { waiting, value} = fetchFromRegisterFile(operand2);
     // Check the operation type and find the appropriate station
     if (operation === "ADD" || operation === "SUB") {
         const index = adderReservationStation.findIndex(entry => entry.busy === 0);
@@ -280,10 +289,10 @@ function issueInstruction() {
             adderReservationStation[index] = {
                 busy: addLatency,
                 operation,
-                Vj: fetchFromRegisterFile(operand1),
-                Vk: fetchFromRegisterFile(operand2),
-                Qj: 0,
-                Qk: 0
+                Vj: vj,
+                Vk: vk,
+                Qj: qj,
+                Qk: qk
             };
             issued = true;
         }
@@ -293,23 +302,27 @@ function issueInstruction() {
             multiplierReservationStation[index] = {
                 busy: multLatency,
                 operation,
-                Vj: fetchFromRegisterFile(operand1),
-                Vk: fetchFromRegisterFile(operand2),
-                Qj: 0,
-                Qk: 0
+                Vj: vj,
+                Vk: vk,
+                Qj: qj,
+                Qk: qk
             };
             issued = true;
         }
     } else if (operation === "LOAD") {
         const index = loadBuffer.findIndex(entry => entry.busy === 0);
         if (index !== -1) {
-            loadBuffer[index] = { busy: loadLatency, address: operand1 };
+            loadBuffer[index] = { busy: loadLatency, address: vj };
             issued = true;
         }
     } else if (operation === "STORE") {
         const index = storeBuffer.findIndex(entry => entry.busy === 0);
         if (index !== -1) {
-            storeBuffer[index] = { busy: storeLatency, address: operand1, V: fetchFromRegisterFile(operand2), Q: 0 };
+            storeBuffer[index] = { 
+                busy: storeLatency, 
+                address: destination, 
+                V: vj, 
+                Q: qj };
             issued = true;
         }
     } else {
@@ -412,6 +425,7 @@ function writeBack() {
         }
     }
 
+
     publishToBus(writeBackArray.shift()); // Broadcast result on the CDB
 }
 
@@ -420,5 +434,5 @@ function writeBack() {
 //TODO:
 //1- Edit instruction format to be based on the instruction(refrence in Instruction Selection)
 //2- change in issue instruction to accomodated rest of operations & check reg file for Qj/k
+
 //3- add latencies for cache miss
-//4- two instructions wish to publish their result on the bus in the same cycle -> make a ready for publishing array
