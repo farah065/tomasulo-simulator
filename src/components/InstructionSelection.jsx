@@ -4,11 +4,10 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 
 function InstructionSelection({ instructions, setInstructions }) {
-    const operations = ["ADD.S", "ADD.D", "ADDI", "SUB.S", "SUB.D", "SUBI", "MUL.S", "MUL.D", "DIV.S", "DIV.D", "L.S", "L.D", "LW", "LD", "S.S", "S.D", "SW", "SD", "BEQ", "BNE", "BEQZ", "BNEZ"];
+    const operations = ["ADD.S", "ADD.D", "DADDI", "SUB.S", "SUB.D", "DSUBI", "MUL.S", "MUL.D", "DIV.S", "DIV.D", "L.S", "L.D", "LW", "LD", "S.S", "S.D", "SW", "SD", "BEQ", "BNE", "BEQZ", "BNEZ"];
     const destSrcTgt = ["ADD.S", "ADD.D", "SUB.S", "SUB.D", "MUL.S", "MUL.D", "DIV.S", "DIV.D"];
-    const destSrcImm = ["ADDI", "SUBI"];
-    const srcTgtLbl = ["BEQ", "BNE"];
-    const srcLbl = ["BEQZ", "BNEZ"]; //NOT WANTED
+    const destSrcImm = ["DADDI", "DSUBI"];
+    const srcTgtImm = ["BEQ", "BNE"];
     const srcImm = ["S.S", "S.D", "SW", "SD"];
     const destImm = ["L.S", "L.D", "LW", "LD"];
     const [instruction, setInstruction] = useState({
@@ -17,10 +16,7 @@ function InstructionSelection({ instructions, setInstructions }) {
         source: "F0",
         target: "F0",
         immediate: 0,
-        label: ""
     });
-    const [label, setLabel] = useState("");
-    const [labels, setLabels] = useState([]);
 
     function addInstruction() {
         let finalInstruction = {};
@@ -54,28 +50,18 @@ function InstructionSelection({ instructions, setInstructions }) {
                 immediate: instruction.immediate,
             };
         }
-        else if (srcTgtLbl.includes(instruction.operation)) {
+        else if (srcTgtImm.includes(instruction.operation)) {
             finalInstruction = {
                 operation: instruction.operation,
                 source: instruction.source,
                 target: instruction.target,
-                label: instruction.label,
+                immediate: instruction.immediate,
             };
         }
-        else if (srcLbl.includes(instruction.operation)) {
-            finalInstruction = {
-                operation: instruction.operation,
-                source: instruction.source,
-                label: instruction.label,
-            };
+        else {
+            return;
         }
         setInstructions([...instructions, finalInstruction]);
-    }
-
-    function addLabelToProgram() {
-        setInstructions([...instructions, { label: label }]);
-        console.log([...instructions, { label: label }])
-        setLabel("");
     }
 
     return (
@@ -107,7 +93,7 @@ function InstructionSelection({ instructions, setInstructions }) {
                     </div>
                 </div>
             }
-            {(destSrcTgt.includes(instruction.operation) || destSrcImm.includes(instruction.operation) || srcTgtLbl.includes(instruction.operation) || srcImm.includes(instruction.operation) || srcLbl.includes(instruction.operation)) &&
+            {(destSrcTgt.includes(instruction.operation) || destSrcImm.includes(instruction.operation) || srcTgtImm.includes(instruction.operation) || srcImm.includes(instruction.operation)) &&
                 <div>
                     <h2 className="mb-1">
                         Source Register
@@ -122,7 +108,7 @@ function InstructionSelection({ instructions, setInstructions }) {
                     </div>
                 </div>
             }
-            {(destSrcTgt.includes(instruction.operation) || srcTgtLbl.includes(instruction.operation)) &&
+            {(destSrcTgt.includes(instruction.operation) || srcTgtImm.includes(instruction.operation)) &&
                 <div>
                     <h2 className="mb-1">
                         Target Register
@@ -137,7 +123,7 @@ function InstructionSelection({ instructions, setInstructions }) {
                     </div>
                 </div>
             }
-            {(destSrcImm.includes(instruction.operation) || srcImm.includes(instruction.operation) || destImm.includes(instruction.operation)) &&
+            {(destSrcImm.includes(instruction.operation) || srcImm.includes(instruction.operation) || srcTgtImm.includes(instruction.operation) || destImm.includes(instruction.operation)) &&
                 <div>
                     <h2 className="mb-1">
                         Immediate Value
@@ -147,18 +133,6 @@ function InstructionSelection({ instructions, setInstructions }) {
                         defaultValue={0}
                         className="w-full"
                         onChange={(e) => setInstruction({ ...instruction, immediate: e.target.value })}
-                    />
-                </div>
-            }
-            {(srcTgtLbl.includes(instruction.operation) || srcLbl.includes(instruction.operation)) &&
-                <div>
-                    <h2 className="mb-1">
-                        Label
-                    </h2>
-                    <ReactSelect
-                        options={labels.map((label) => ({ value: label, label: label }))}
-                        placeholder="Select..."
-                        onChange={(selectedOption) => setInstruction({ ...instruction, label: selectedOption.value })}
                     />
                 </div>
             }
@@ -178,27 +152,6 @@ function InstructionSelection({ instructions, setInstructions }) {
                     Undo
                 </Button>
             </div>
-            <div>
-                <h2 className="mb-1">
-                    Label
-                </h2>
-                <Input
-                    className="w-full"
-                    onChange={(e) => setLabel(e.target.value)}
-                    value={label}
-                    placeholder="Enter label..."
-                />
-            </div>
-            <Button
-                variant="default"
-                className="px-3 w-full justify-center"
-                onClick={() => {
-                    setLabels([...labels, label]);
-                    addLabelToProgram();
-                }}
-            >
-                Add Label
-            </Button>
         </div>
     );
 }
