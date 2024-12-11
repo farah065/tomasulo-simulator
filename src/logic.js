@@ -1,10 +1,23 @@
 
 //Initializing basic Hardware
-const InstructionQueue = [];//instruction format :{operation,operand1,operand2,destination}
+const Instructions = []; //the array of instructions recieved from frontend,  format :{operation,operand1,operand2,destination}
+const InstructionQueue = [];//instruction queue isnt used for execution only to store all previously executed instructions
+const currInstruction = { busy:0 , operation:"", Vj: 0, Vk: 0, Qj: 0, Qk: 0}; // the instruction that is currently getting issued
+
+const cacheMissPenalty = 2;
 const cache = [];  //{address,data}
+const cacheMiss = false;
+
 const RegisterFile = [];//{number,data}
 const memory = [];//{address,data}
 const writeBackArray =[]; //has all instructions ready to be written
+const pc = 0;
+
+const addLatency = 0;
+const multLatency = 0;
+const loadLatency = 0;
+const storeLatency = 0;
+
 
 //Initializing reservation stations
 const adderReservationStation=[]; //{busy, operation , Vj, Vk, Qj, Qk}
@@ -15,7 +28,7 @@ const storeBuffer = []; //{busy,Address, V, Q}
 
 
 //1)Initializing
-function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, latency){
+function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, _addLatency, _multLatency, _loadLatency, _storeLatency){
     for (let i = 0; i < adderResSize; i++) {
         adderReservationStation.push({ busy:0 , operation:"", Vj: 0, Vk: 0, Qj: 0, Qk: 0});
     }
@@ -31,16 +44,23 @@ function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, latenc
     for (let i = 0; i < storeBufferSize; i++) {
         storeBuffer.push({ busy:0 , address:0 , V: 0, Q: 0});
     }
+
+    addLatency = _addLatency;
+    multLatency = _multLatency;
+    loadLatency = _loadLatency;
+    storeLatency = _storeLatency;
 }
 //---------------------------------------------------------------------------------------------------------
 
 
-//2)InstructionQueue
-function addInstructionToInstructionQueue(instruction) { //Filling the instruction Queue with instructions
-    InstructionQueue.push(instruction);
-}
-function fetchInstruction() { //Filling the instruction Queue with instructions
-    return InstructionQueue.shift();
+function fetchInstruction() {
+    if (pc < Instructions.length) {
+        const currInstruction = Instructions[pc]; // Fetch instruction at current pc
+        InstructionQueue.push(currInstruction); // Add it to the queue
+        pc++; // Increment the program counter to point to the next instruction
+    } else {
+        console.log("No more instructions to fetch.");
+    }
 }
 //---------------------------------------------------------------------------------------------------------
 
@@ -65,6 +85,7 @@ function fetchFromCache(memoryAddress , memoryData){ //Fetching from cache
     const entry = cache.find(entry => entry.data === memoryData);
     if(entry == null){
         fetchToCache(memoryAddress);
+        cacheMiss=true;
         entry = cache.find(entry => entry.data === memoryData);
     }
     return entry;
@@ -114,7 +135,8 @@ function updateAdderReservationStation(address, data){
 }
 
 function addInstructionToAdderReservationStation(instruction){
-    const index = adderReservationStation.findIndex(entry => entry.busy === 0);
+    // const index = adderReservationStation.findIndex(entry => entry.busy === 0);
+    const index = adderReservationStation.findIndex(entry => entry.operation===""); 
     if (index !== -1) { // -1 means the item wasn't found
         adderReservationStation[index]= instruction;
     }
@@ -124,7 +146,8 @@ function addInstructionToAdderReservationStation(instruction){
 }
 
 function removeInstructionFromAdderReservationStation(index){
-    adderReservationStation[index].busy= 0;
+    // adderReservationStation[index].busy= 0;
+    adderReservationStation[index] = { busy:0 , operation:"", Vj: 0, Vk: 0, Qj: 0, Qk: 0};
 }
 //---------------------------------------------------------------------------------------------------------
 
@@ -146,7 +169,8 @@ function updateMultiplierReservationStation(address, data){
 }
 
 function addInstructionToMultiplierReservationStation(instruction){
-    const index = multiplierReservationStation.findIndex(entry => entry.busy === 0);
+    // const index = multiplierReservationStation.findIndex(entry => entry.busy === 0);
+    const index = multiplierReservationStation.findIndex(entry => entry.operation === "");
     if (index !== -1) { // -1 means the item wasn't found
         multiplierReservationStation[index]= instruction;
     }
@@ -156,7 +180,8 @@ function addInstructionToMultiplierReservationStation(instruction){
 }
 
 function removeInstructionFromMultiplierReservationStation(index){
-    multiplierReservationStation[index].busy= 0;
+    // multiplierReservationStation[index].busy= 0;
+    multiplierReservationStation[index] = { busy:0 , operation:"", Vj: 0, Vk: 0, Qj: 0, Qk: 0};
 }
 //---------------------------------------------------------------------------------------------------------
 
@@ -164,7 +189,8 @@ function removeInstructionFromMultiplierReservationStation(index){
 //8)Load Buffer
 //{busy,Address}
 function addInstructionToLoadBuffer(instruction){
-    const index = loadBuffer.findIndex(entry => entry.busy === 0);
+    // const index = loadBuffer.findIndex(entry => entry.busy === 0);
+    const index = loadBuffer.findIndex(entry => entry.entry.operation === "");
     if (index !== -1) { // -1 means the item wasn't found
         loadBuffer[index]= instruction;
     }
@@ -174,7 +200,8 @@ function addInstructionToLoadBuffer(instruction){
 }
 
 function removeInstructionFromLoadBuffer(index){
-    loadBuffer[index].busy= 0;
+    // loadBuffer[index].busy= 0;
+    loadBuffer[index] = { busy:0 , address:0};
 }
 //---------------------------------------------------------------------------------------------------------
 
@@ -192,7 +219,8 @@ function updateStoreBuffer(address, data){
 }
 
 function addInstructionToStoreBuffer(instruction){
-    const index = storeBuffer.findIndex(entry => entry.busy === 0);
+    // const index = storeBuffer.findIndex(entry => entry.busy === 0);
+    const index = storeBuffer.findIndex(entry => entry.operation === "");
     if (index !== -1) { // -1 means the item wasn't found
         storeBuffer[index]= instruction;
     }
@@ -202,7 +230,8 @@ function addInstructionToStoreBuffer(instruction){
 }
 
 function removeInstructionFromStoreBuffer(index){
-    storeBuffer[index].busy= 0;
+    // storeBuffer[index].busy= 0;
+    storeBuffer[index] = { busy:0 , address:0 , V: 0, Q: 0};
 }
 //---------------------------------------------------------------------------------------------------------
 
@@ -239,10 +268,8 @@ function publishToBus(address, data){
 
 //12)Instruction Cycle
 function issueInstruction() {
-    if (InstructionQueue.length === 0) return; // No instructions to issue
 
-    const instruction = fetchInstruction(); // Get the next instruction
-    const { operation, operand1, operand2, destination } = instruction;
+    const { operation, operand1, operand2, destination } = currInstruction;
 
     let issued = false; // Flag to check if the instruction was successfully issued bec reservation station full
 
@@ -251,7 +278,7 @@ function issueInstruction() {
         const index = adderReservationStation.findIndex(entry => entry.busy === 0);
         if (index !== -1) {
             adderReservationStation[index] = {
-                busy: 1,
+                busy: addLatency,
                 operation,
                 Vj: fetchFromRegisterFile(operand1),
                 Vk: fetchFromRegisterFile(operand2),
@@ -264,7 +291,7 @@ function issueInstruction() {
         const index = multiplierReservationStation.findIndex(entry => entry.busy === 0);
         if (index !== -1) {
             multiplierReservationStation[index] = {
-                busy: 1,
+                busy: multLatency,
                 operation,
                 Vj: fetchFromRegisterFile(operand1),
                 Vk: fetchFromRegisterFile(operand2),
@@ -276,22 +303,22 @@ function issueInstruction() {
     } else if (operation === "LOAD") {
         const index = loadBuffer.findIndex(entry => entry.busy === 0);
         if (index !== -1) {
-            loadBuffer[index] = { busy: 1, address: operand1 };
+            loadBuffer[index] = { busy: loadLatency, address: operand1 };
             issued = true;
         }
     } else if (operation === "STORE") {
         const index = storeBuffer.findIndex(entry => entry.busy === 0);
         if (index !== -1) {
-            storeBuffer[index] = { busy: 1, address: operand1, V: fetchFromRegisterFile(operand2), Q: 0 };
+            storeBuffer[index] = { busy: storeLatency, address: operand1, V: fetchFromRegisterFile(operand2), Q: 0 };
             issued = true;
         }
     } else {
         console.error("Unsupported operation:", operation);
     }
 
-    // If the instruction couldn't be issued, add it back to the queue
+    // If the instruction couldn't be issued, dont move to issue the next instruction (stall)
     if (!issued) {
-        InstructionQueue.unshift(instruction); // Add it back to the front of the queue
+        pc-=1;
     }
 }
 
@@ -299,41 +326,47 @@ function execute() {
     // Execute instructions in Adder Reservation Stations
     for (let i = 0; i < adderReservationStation.length; i++) {
         const station = adderReservationStation[i];
-        if (station.busy && station.Qj === 0 && station.Qk === 0) {
+        if(station.busy>0 && station.Qj === 0 && station.Qk === 0){
+            adderReservationStation[i].busy -= 1; // subtract from busy to simulate latency
+        }
+        if (station.busy === 0 ) {
             const result = ALU(station.operation, station.Vj, station.Vk);
             adderReservationStation[i].result = result; // Store result temporarily
-            adderReservationStation[i].busy = 2; // Execution in progress (latency simulation)
         }
     }
 
     // Execute instructions in Multiplier Reservation Stations
     for (let i = 0; i < multiplierReservationStation.length; i++) {
         const station = multiplierReservationStation[i];
-        if (station.busy && station.Qj === 0 && station.Qk === 0) {
+        if(station.busy>0 && station.Qj === 0 && station.Qk === 0){
+            adderReservationStation[i].busy -= 1; // subtract from busy to simulate execution latency
+        }
+        if (station.busy === 0 ) {
             const result = ALU(station.operation, station.Vj, station.Vk);
-            multiplierReservationStation[i].result = result; // Store result temporarily
-            multiplierReservationStation[i].busy = 3; // Execution in progress (latency simulation)
+            adderReservationStation[i].result = result; // Store result temporarily
         }
     }
 
     // Execute Load Buffer
-    for (let i = 0; i < loadBuffer.length; i++) {
+    for (let i = 0; i < loadBuffer.length; i++) { // deal with cache miss here
         const buffer = loadBuffer[i];
         if (buffer.busy && buffer.data == null) { // Data is not yet fetched
             const memoryData = fetchFromCache(buffer.address); // Simulate memory access
             loadBuffer[i].data = memoryData; // Fetch the data
-            loadBuffer[i].busy = 2; // Mark as in progress
+            loadBuffer[i].busy -= 1;
         }
     }
 
     // Execute Store Buffer
     for (let i = 0; i < storeBuffer.length; i++) {
         const buffer = storeBuffer[i];
-        if (buffer.busy && buffer.Q === 0) { // Data is ready for storing
+        if(station.busy>0 && buffer.Q === 0){
+            storeBuffer[i].busy -= 1;
+        }
+        if (station.busy === 0 ) { // Data is ready for storing
             const memoryAddress = buffer.address;
             const value = buffer.V;
             memory[memoryAddress] = value; // Store value in memory
-            storeBuffer[i].busy = 2; // Mark as in progress
         }
     }
 }
@@ -342,7 +375,7 @@ function writeBack() {
     // Check Adder Reservation Stations
     for (let i = 0; i < adderReservationStation.length; i++) {
         const station = adderReservationStation[i];
-        if (station.busy === 1) { // Execution completed
+        if (station.busy === 0) { // Execution completed
             const { result, destination } = station;
             writeBackArray.push({destination, result});
             removeInstructionFromAdderReservationStation(i); // Free the reservation station
@@ -352,7 +385,7 @@ function writeBack() {
     // Check Multiplier Reservation Stations
     for (let i = 0; i < multiplierReservationStation.length; i++) {
         const station = multiplierReservationStation[i];
-        if (station.busy === 1) { // Execution completed
+        if (station.busy === 0) { // Execution completed
             const { result, destination } = station;
             writeBackArray.push({destination, result});
             removeInstructionFromMultiplierReservationStation(i); // Free the reservation station
@@ -362,7 +395,7 @@ function writeBack() {
     // Check Load Buffer
     for (let i = 0; i < loadBuffer.length; i++) {
         const buffer = loadBuffer[i];
-        if (buffer.busy === 1 && buffer.data != null) { // Data ready for write-back
+        if (buffer.busy === 0 && buffer.data != null) { // Data ready for write-back
             const { data, destination } = buffer;
             writeBackArray.push({destination, result});
             removeInstructionFromLoadBuffer(i); // Free the load buffer entry
@@ -372,7 +405,7 @@ function writeBack() {
     // Check Store Buffer
     for (let i = 0; i < storeBuffer.length; i++) {
         const buffer = storeBuffer[i];
-        if (buffer.busy === 1 && buffer.Q === 0) { // Store operation ready for memory write
+        if (buffer.busy === 0 && buffer.Q === 0) { // Store operation ready for memory write
             const { address, V } = buffer;
             memory[address] = V; // Store value to memory
             storeBuffer[i].busy = 0; // Mark the store buffer entry as free
@@ -385,13 +418,7 @@ function writeBack() {
 //---------------------------------------------------------------------------------------------------------
 
 //TODO:
-//1-Instead of popping an inst in fetching, add pc
-//2-Edit instruction format to be based on the instruction(refrence in Instruction Selection)
-//3-change in issue instruction to accomodated rest of operations & check reg file for Gj/k
-//4- add latencies
-    //let busy is the one that keeps track of latency
-    //The user should be able to input the latency of each type of instruction before we start simulating
-    //cache miss
-//5- two instructions wish to publish their result on the bus in the same cycle
-
-//make a fake main method to test everything and fake link methods
+//1- Edit instruction format to be based on the instruction(refrence in Instruction Selection)
+//2- change in issue instruction to accomodated rest of operations & check reg file for Qj/k
+//3- add latencies for cache miss
+//4- two instructions wish to publish their result on the bus in the same cycle -> make a ready for publishing array
