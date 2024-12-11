@@ -2,7 +2,6 @@
 //Initializing basic Hardware
 const Instructions = []; //the array of instructions recieved from frontend,  format :{operation,operand1,operand2,destination}
 const InstructionQueue = [];//instruction queue isnt used for execution only to store all previously executed instructions
-const currInstruction = { busy:0 , operation:"", Vj: 0, Vk: 0, Qj: 0, Qk: 0}; // the instruction that is currently getting issued
 
 const cacheMissPenalty = 2;
 const cache = [];  //{address,data}
@@ -55,9 +54,39 @@ function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, _addLa
 
 function fetchInstruction() {
     if (pc < Instructions.length) {
-        const currInstruction = Instructions[pc]; // Fetch instruction at current pc
+
+        const fetchedInstruction = Instructions[pc]; // Fetch instruction at current pc
+
+        //Set the values of currInstruction depending on operation
+        const destSrcTgt = ["ADD.S", "ADD.D", "SUB.S", "SUB.D", "MUL.S", "MUL.D", "DIV.S", "DIV.D"];
+        const destSrcImm = ["ADDI", "SUBI"];
+        const srcTgtLbl = ["BEQ", "BNE"];
+        const srcImm = ["S.S", "S.D", "SW", "SD"];
+        const destImm = ["L.S", "L.D", "LW", "LD"];
+
+        const currInstruction = {};
+        if (destSrcTgt.includes(fetchedInstruction.operation)) {
+            currInstruction = { operation: fetchedInstruction.operation , operand1: fetchedInstruction.source , operand2: fetchedInstruction.target, destination: fetchedInstruction.destination};
+        }
+        else if (destSrcImm.includes(fetchedInstruction.operation)) {
+            currInstruction = { operation: fetchedInstruction.operation , operand1: fetchedInstruction.source , operand2: fetchedInstruction.immediate, destination: fetchedInstruction.destination};
+        }
+        else if (srcTgtLbl.includes(fetchedInstruction.operation)) {
+            currInstruction = { operation: fetchedInstruction.operation , operand1: fetchedInstruction.source , operand2: fetchedInstruction.target, destination: fetchedInstruction.label};
+        }
+        else if (srcImm.includes(fetchedInstruction.operation)) {
+            currInstruction = { operation: fetchedInstruction.operation , operand1: fetchedInstruction.source , operand2: 0, destination: fetchedInstruction.immediate};
+        }
+        else if (destImm.includes(fetchedInstruction.operation)) {
+            currInstruction = { operation: fetchedInstruction.operation , operand1: fetchedInstruction.immediate , operand2: 0, destination: fetchedInstruction.destination};
+        }
+        else{
+            console.log("Invalid Operation");
+        }
+
         InstructionQueue.push(currInstruction); // Add it to the queue
         pc++; // Increment the program counter to point to the next instruction
+        return currInstruction;
     } else {
         console.log("No more instructions to fetch.");
     }
@@ -273,7 +302,7 @@ function publishToBus(address, data){
 //12)Instruction Cycle
 function issueInstruction() {
 
-    const { operation, operand1, operand2, destination } = currInstruction;
+    const { operation, operand1, operand2, destination } = fetchInstruction();
 
     let issued = false; // Flag to check if the instruction was successfully issued bec reservation station full
 
@@ -296,6 +325,7 @@ function issueInstruction() {
             };
             issued = true;
         }
+        writeToRegisterFile("A"+index,destination);
     } else if (operation === "MUL" || operation === "DIV") {
         const index = multiplierReservationStation.findIndex(entry => entry.busy === 0);
         if (index !== -1) {
@@ -309,12 +339,14 @@ function issueInstruction() {
             };
             issued = true;
         }
+        writeToRegisterFile("M"+index,destination);
     } else if (operation === "LOAD") {
         const index = loadBuffer.findIndex(entry => entry.busy === 0);
         if (index !== -1) {
             loadBuffer[index] = { busy: loadLatency, address: vj };
             issued = true;
         }
+        writeToRegisterFile("L" + index , destination);
     } else if (operation === "STORE") {
         const index = storeBuffer.findIndex(entry => entry.busy === 0);
         if (index !== -1) {
