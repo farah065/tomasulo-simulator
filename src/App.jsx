@@ -41,12 +41,9 @@ function App() {
                 string += ` ${instruction.source}, ${instruction.immediate}`;
             }
             else if (["BEQ", "BNE"].includes(instruction.operation)) {
-                string += ` ${instruction.source}, ${instruction.target}, ${instruction.label}`;
+                string += ` ${instruction.source}, ${instruction.target}, ${instruction.immediate}`;
             }
-            else if (["BEQZ", "BNEZ"].includes(instruction.operation)) {
-                string += ` ${instruction.source}, ${instruction.label}`;
-            }
-            else if (["ADDI", "SUBI"].includes(instruction.operation)) {
+            else if (["DADDI", "DSUBI"].includes(instruction.operation)) {
                 string += ` ${instruction.destination}, ${instruction.source}, ${instruction.immediate}`;
             }
             else {
@@ -55,9 +52,6 @@ function App() {
             return string;
         });
         const formattedInstructions = instructionStrings.map((instruction) => {
-            if (instruction instanceof Object) {
-                return instruction;
-            }
             return {
                 instruction: instruction,
                 issue: "",
@@ -89,7 +83,7 @@ function App() {
                             <div className="flex flex-col gap-2">
                                 {formatInstructions(instructions).map((instruction, index) => (
                                     <p key={index}>
-                                        {instruction.instruction ? instruction.instruction : `${instruction.label}:`}
+                                        {instruction.instruction}
                                     </p>
                                 ))}
                             </div>
@@ -135,7 +129,7 @@ function App() {
                             <div className="flex flex-col gap-2">
                                 {formatInstructions(instructions).map((instruction, index) => (
                                     <p key={index}>
-                                        {instruction.instruction ? instruction.instruction : `${instruction.label}:`}
+                                        {instruction.instruction}
                                     </p>
                                 ))}
                             </div>
