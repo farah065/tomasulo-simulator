@@ -627,7 +627,10 @@ function writeBack(cycle) {
 
     console.log("writeback array: ", writeBackArray);
     if (writeBackArray.length !== 0) {
-        let temp = writeBackArray.shift();
+        // let temp be the element in writeBackArray with the smallest id
+        let tempIndex = writeBackArray.reduce((minIndex, current, index, array) => current.id < array[minIndex].id ? index : minIndex, 0);
+        let temp = writeBackArray[tempIndex];
+        writeBackArray.splice(tempIndex, 1);
         InstructionQueue[temp.id].writeResult = cycle;
         publishToBus(temp.tag, temp.result); // Broadcast result on the CDB
     }
