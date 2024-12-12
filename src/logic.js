@@ -168,11 +168,8 @@ function fetchFromRegisterFile(registerNumber) {
 
 function writeToRegisterFile(registerNumber, registerData, registerWating){
     console.log("fefWFw", registerNumber,registerData,registerWating);
-    const index = RegisterFile.findIndex(entry => entry.waiting === registerWating);
-    if (index !== -1) { // -1 means the item wasn't found
-        RegisterFile[index].data = registerData; // Update the data
-    } else {
-        return -1;
+    if (registerData !== -1) { // -1 means the item wasn't found
+        RegisterFile[registerNumber].data = registerData; // Update the data
     }
     // RegisterFile[registerNumber].data = 0;
     RegisterFile[registerNumber].waiting = registerWating;
@@ -323,7 +320,7 @@ function ALU(operation, operand1, operand2){
 
 //11)Bus
 function publishToBus(tag, data){
-    console.log("published");
+    console.log("published", tag, data);
 
     const registerNumber = RegisterFile.findIndex(entry => entry.waiting === tag);
 
@@ -357,7 +354,7 @@ function issueInstruction() {
         const index = adderReservationStation.findIndex(entry => entry.busy === 0);
         if (index !== -1) {
             adderReservationStation[index] = {
-                busy: addLatency,
+                busy: addLatency+1,
                 operation: operation,
                 Vj: vj,
                 Vk: vk,
@@ -372,7 +369,7 @@ function issueInstruction() {
         const index = multiplierReservationStation.findIndex(entry => entry.busy === 0);
         if (index !== -1) {
             multiplierReservationStation[index] = {
-                busy: multLatency,
+                busy: multLatency+1,
                 operation: operation,
                 Vj: vj,
                 Vk: vk,
@@ -387,7 +384,7 @@ function issueInstruction() {
         const index = loadBuffer.findIndex(entry => entry.busy === 0);
         if (index !== -1) {
             loadBuffer[index] = { 
-                busy: loadLatency, 
+                busy: loadLatency+1, 
                 address: operand1, 
                 result: 0
             };
@@ -398,7 +395,7 @@ function issueInstruction() {
         const index = storeBuffer.findIndex(entry => entry.busy === 0);
         if (index !== -1) {
             storeBuffer[index] = { 
-                busy: storeLatency, 
+                busy: storeLatency+1, 
                 address: destination, 
                 V: vj, 
                 Q: qj };
@@ -421,7 +418,7 @@ function execute() {
         if(station.busy>0 && station.Qj === 0 && station.Qk === 0){
             adderReservationStation[i].busy -= 1; // subtract from busy to simulate latency
         }
-        if (station.busy === 0 && station.operation !== "") {
+        if (station.busy === 1 && station.operation !== "") {
             const result = ALU(station.operation, station.Vj, station.Vk);
             adderReservationStation[i].result = result; // Store result temporarily
         }
@@ -433,7 +430,7 @@ function execute() {
         if(station.busy>0 && station.Qj === 0 && station.Qk === 0){
             multiplierReservationStation[i].busy -= 1; // subtract from busy to simulate execution latency
         }
-        if (station.busy === 0 && station.operation !== "") {
+        if (station.busy === 1 && station.operation !== "") {
             const result = ALU(station.operation, station.Vj, station.Vk);
             multiplierReservationStation[i].result = result; // Store result temporarily
         }
@@ -445,7 +442,7 @@ function execute() {
         if (buffer.busy>0) { // Data is not yet fetched
             loadBuffer[i].busy -= 1;
         }
-        if(buffer.busy===0 && buffer.address !== -1){//PROBLEM
+        if(buffer.busy===1 && buffer.address !== -1){//PROBLEM
         //     console.log("problem")
             const memoryData = fetchFromCache(buffer.address); // Simulate memory access
             loadBuffer[i].result = memoryData; // Fetch the data
@@ -458,7 +455,7 @@ function execute() {
         if(buffer.busy>0 && buffer.Q === 0){
             storeBuffer[i].busy -= 1;
         }
-        if (buffer.busy === 0 && buffer.address !== -1) { // Data is ready for storing
+        if (buffer.busy === 1 && buffer.address !== -1) { // Data is ready for storing
             console.log("enetered store exec");
             const memoryAddress = buffer.address;
             const value = buffer.V;
@@ -521,7 +518,8 @@ function writeBack() {
 
     console.log("writeback array: ", writeBackArray);
     if(writeBackArray.length !== 0){
-        publishToBus(writeBackArray.shift()); // Broadcast result on the CDB
+        let temp = writeBackArray.shift();
+        publishToBus(temp.tag, temp.result); // Broadcast result on the CDB
     }
 }
 
@@ -572,9 +570,15 @@ function main() {
     while (cycle < maxCycles) {
         console.log(`Cycle ${cycle}`);
         
-        writeBack();
+       
         execute();
-        issueInstruction();
+        writeBack();
+        if(pc < Instructions.length){
+            issueInstruction();
+        }
+
+        
+        
 
         if (InstructionQueue.length === Instructions.length && 
             adderReservationStation.every(station => station.busy === 0) &&
@@ -613,6 +617,7 @@ main();
 //1- implement branch
 //2- implement store and load conflict
 //3- add latencies for cache miss
+//4- adjust main method for frontend
 
 
 // Testing:
