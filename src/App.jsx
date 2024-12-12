@@ -53,7 +53,7 @@ function App() {
             "operation": "S.D",
             "source": 6,
             "immediate": 4
-        }
+        },
     ]);
     const [instructionQueue, setInstructionQueue] = useState([]);
     const [stationSizes, setStationSizes] = useState({

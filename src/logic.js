@@ -557,15 +557,16 @@ function execute() {
     }
 }
 
-function writeBack() {
+function writeBack(cycle) {
     console.log("WRITEBACK");
     // Check Adder Reservation Stations
     for (let i = 0; i < adderReservationStation.length; i++) {
         const station = adderReservationStation[i];
         if (station.busy === 0 && station.operation !== "") { // Execution completed
             let result = station.result;
+            let id = station.id;
             let tag = "A" + i;
-            writeBackArray.push({ tag, result });
+            writeBackArray.push({ tag, result, id });
             removeInstructionFromAdderReservationStation(i); // Free the reservation station
         }
     }
@@ -575,8 +576,9 @@ function writeBack() {
         const station = multiplierReservationStation[i];
         if (station.busy === 0 && station.operation !== "") { // Execution completed
             let result = station.result;
+            let id = station.id;
             let tag = "M" + i;
-            writeBackArray.push({ tag, result });
+            writeBackArray.push({ tag, result, id });
             removeInstructionFromMultiplierReservationStation(i); // Free the reservation station
         }
     }
@@ -601,8 +603,9 @@ function writeBack() {
             // const { data, destination } = buffer;
             // writeBackArray.push({destination, result});
             let result = buffer.result;
+            let id = buffer.id;
             let tag = "L" + i;
-            writeBackArray.push({ tag, result });
+            writeBackArray.push({ tag, result, id });
             // const memoryData = fetchFromCache(buffer.address); // Simulate memory access
             // const register = RegisterFile.find(register => register.waiting === "L" + i);
             // register.data = memoryData; // Fetch the data
@@ -625,6 +628,7 @@ function writeBack() {
     console.log("writeback array: ", writeBackArray);
     if (writeBackArray.length !== 0) {
         let temp = writeBackArray.shift();
+        InstructionQueue[temp.id].writeResult = cycle;
         publishToBus(temp.tag, temp.result); // Broadcast result on the CDB
     }
 }
@@ -656,7 +660,7 @@ function formatInstructions(instructions) {
             instruction: instruction,
             issue: instructions[index].issue || "",
             execute: instructions[index].execute || "",
-            writeResult: "",
+            writeResult: instructions[index].writeResult || "",
         };
     });
     return formattedInstructions;
@@ -716,9 +720,9 @@ function main() {
 
 
         execute();
-        writeBack();
+        writeBack(cycle);
         if (pc < Instructions.length) {
-            issueInstruction();
+            issueInstruction(cycle);
         }
 
 
@@ -822,7 +826,7 @@ async function advanceCycle(cycle) {
 
     // Execute the three main stages
     execute();
-    writeBack();
+    writeBack(cycle);
     if (pc < Instructions.length) {
         issueInstruction(cycle);
     }
