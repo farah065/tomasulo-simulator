@@ -61,12 +61,14 @@ function App() {
         fpMultipliers: 2,
         loadBuffers: 2,
         storeBuffers: 2,
+        branchStation: 1,
     });
     const [instructionLatencies, setInstructionLatencies] = useState({
         fpAdd: 4,
         fpMult: 6,
         load: 2,
         store: 2,
+        branch: 1,
     });
     const [page, setPage] = useState(0);
     const [cycle, setCycle] = useState(0);
