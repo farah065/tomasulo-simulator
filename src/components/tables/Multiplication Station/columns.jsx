@@ -8,23 +8,19 @@ export const columns = () => [
         header: "Busy",
     },
     {
-        accessorKey: "vj",
+        accessorKey: "Vj",
         header: "Vj",
     },
     {
-        accessorKey: "vk",
+        accessorKey: "Vk",
         header: "Vk",
     },
     {
-        accessorKey: "qj",
+        accessorKey: "Qj",
         header: "Qj",
     },
     {
-        accessorKey: "qk",
+        accessorKey: "Qk",
         header: "Qk",
     },
-    {
-        accessorKey: "a",
-        header: "A",
-    }
 ];

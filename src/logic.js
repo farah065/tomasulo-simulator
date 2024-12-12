@@ -8,7 +8,7 @@ let cacheMiss = false;
 
 let RegisterFile = [];//{waiting,data}
 let memory = [];//{address,data}
-let writeBackArray =[]; //has all instructions ready to be written
+let writeBackArray = []; //has all instructions ready to be written
 let pc = 0;
 
 let addLatency = 0;
@@ -18,36 +18,36 @@ let storeLatency = 0;
 
 
 //Initializing reservation stations
-let adderReservationStation=[]; //{busy, operation , Vj, Vk, Qj, Qk}
-let multiplierReservationStation= []; //{busy, operation , Vj, Vk, Qj, Qk}
+let adderReservationStation = []; //{busy, operation , Vj, Vk, Qj, Qk}
+let multiplierReservationStation = []; //{busy, operation , Vj, Vk, Qj, Qk}
 let loadBuffer = []; //{busy,Address}
 let storeBuffer = []; //{busy,Address, V, Q}
 //---------------------------------------------------------------------------------------------------------
 
-    const ADD = ["ADD.S", "ADD.D", "ADDI"]; 
-    const SUB = ["SUB.S", "SUB.D","SUBI"]; 
-    const MUL = ["MUL.S", "MUL.D"];
-    const DIV = ["DIV.S", "DIV.D"];
-    const BRNCH = ["BEQ", "BNE"];
-    const STORE = ["S.S", "S.D", "SW", "SD"];
-    const LOAD = ["L.S", "L.D", "LW", "LD"];
+const ADD = ["ADD.S", "ADD.D", "DADDI"];
+const SUB = ["SUB.S", "SUB.D", "DSUBI"];
+const MUL = ["MUL.S", "MUL.D"];
+const DIV = ["DIV.S", "DIV.D"];
+const BRNCH = ["BEQ", "BNE"];
+const STORE = ["S.S", "S.D", "SW", "SD"];
+const LOAD = ["L.S", "L.D", "LW", "LD"];
 
 //1)Initializing
-function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, _addLatency, _multLatency, _loadLatency, _storeLatency){
+function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, _addLatency, _multLatency, _loadLatency, _storeLatency) {
     for (let i = 0; i < adderResSize; i++) {
-        adderReservationStation.push({ busy:0 , operation:"", Vj: 0, Vk: 0, Qj: 0, Qk: 0, result: 0});
+        adderReservationStation.push({ busy: 0, operation: "", Vj: 0, Vk: 0, Qj: 0, Qk: 0, result: 0 });
     }
 
     for (let i = 0; i < multResSize; i++) {
-        multiplierReservationStation.push({ busy:0 , operation:"", Vj: 0, Vk: 0, Qj: 0, Qk: 0, result: 0});
+        multiplierReservationStation.push({ busy: 0, operation: "", Vj: 0, Vk: 0, Qj: 0, Qk: 0, result: 0 });
     }
 
     for (let i = 0; i < loadBufferSize; i++) {
-        loadBuffer.push({ busy:0 , address:-1, result: 0});
+        loadBuffer.push({ busy: 0, address: -1, result: 0 });
     }
 
     for (let i = 0; i < storeBufferSize; i++) {
-        storeBuffer.push({ busy:0 , address:-1 , V: 0, Q: 0});
+        storeBuffer.push({ busy: 0, address: -1, V: 0, Q: 0 });
     }
 
     addLatency = _addLatency;
@@ -65,29 +65,29 @@ function fetchInstruction() {
 
         //Set the values of currInstruction depending on operation
         const destSrcTgt = ["ADD.S", "ADD.D", "SUB.S", "SUB.D", "MUL.S", "MUL.D", "DIV.S", "DIV.D"];
-        const destSrcImm = ["ADDI", "SUBI"];
+        const destSrcImm = ["DADDI", "DSUBI"];
         const srcTgtLbl = ["BEQ", "BNE"];
         const srcImm = ["S.S", "S.D", "SW", "SD"];
         const destImm = ["L.S", "L.D", "LW", "LD"];
 
         let currInstruction = {};
         if (destSrcTgt.includes(fetchedInstruction.operation)) {
-            currInstruction = { operation: fetchedInstruction.operation , operand1: fetchedInstruction.source , operand2: fetchedInstruction.target, destination: fetchedInstruction.destination};
+            currInstruction = { operation: fetchedInstruction.operation, operand1: fetchedInstruction.source, operand2: fetchedInstruction.target, destination: fetchedInstruction.destination };
         }
         else if (destSrcImm.includes(fetchedInstruction.operation)) {
-            currInstruction = { operation: fetchedInstruction.operation , operand1: fetchedInstruction.source , operand2: fetchedInstruction.immediate, destination: fetchedInstruction.destination};
+            currInstruction = { operation: fetchedInstruction.operation, operand1: fetchedInstruction.source, operand2: fetchedInstruction.immediate, destination: fetchedInstruction.destination };
         }
         else if (srcTgtLbl.includes(fetchedInstruction.operation)) {
-            currInstruction = { operation: fetchedInstruction.operation , operand1: fetchedInstruction.source , operand2: fetchedInstruction.target, destination: fetchedInstruction.label};
+            currInstruction = { operation: fetchedInstruction.operation, operand1: fetchedInstruction.source, operand2: fetchedInstruction.target, destination: fetchedInstruction.label };
         }
         else if (srcImm.includes(fetchedInstruction.operation)) {
-            currInstruction = { operation: fetchedInstruction.operation , operand1: fetchedInstruction.source , operand2: 0, destination: fetchedInstruction.immediate};
+            currInstruction = { operation: fetchedInstruction.operation, operand1: fetchedInstruction.source, operand2: 0, destination: fetchedInstruction.immediate };
         }
         else if (destImm.includes(fetchedInstruction.operation)) {
             // console.log("immediate: ",fetchedInstruction);
-            currInstruction = { operation: fetchedInstruction.operation , operand1: fetchedInstruction.immediate , operand2: 0, destination: fetchedInstruction.destination};
+            currInstruction = { operation: fetchedInstruction.operation, operand1: fetchedInstruction.immediate, operand2: 0, destination: fetchedInstruction.destination };
         }
-        else{
+        else {
             console.log("Invalid Operation");
         }
 
@@ -104,43 +104,43 @@ function fetchInstruction() {
 
 //3)Memory
 //TODO: Check size of memory
-function InitializingMemory(values){ //values is an array of values
+function InitializingMemory(values) { //values is an array of values
     // values.forEach((value, index) => {
     //     // console.log("idk: ", {value, index})
     //     memory.push({ waiting: index, data: value }); // Assign sequential numbers starting from 1
     // });
-    memory=values;
+    memory = values;
 }
 
-function InitializingCache(values){ //values is an array of values
+function InitializingCache(values) { //values is an array of values
     // values.forEach((value, index) => {
     //     // console.log("idk: ", {value, index})
     //     cache.push({ address: index, data: 0 }); // Assign sequential numbers starting from 1
     // });
-    cache=values;
+    cache = values;
 }
 //---------------------------------------------------------------------------------------------------------
 
 
 //4)Cache
-function fetchToCache(memoryAddress){ // handling cache misses
+function fetchToCache(memoryAddress) { // handling cache misses
     // const entry = memory.find(entry => entry.address === memoryAddress);
     const entry = memory[memoryAddress];
     // console.log("mementry: ", entry);
     // const cacheEntry = cache.find(cacheEntry => cacheEntry.address === memoryAddress); // Find the cache entry with the same address
     // cacheEntry.data = entry.data;
-    cache[memoryAddress]=entry;
+    cache[memoryAddress] = entry;
 }
 
-function fetchFromCache(memoryAddress){ //Fetching from cache 
+function fetchFromCache(memoryAddress) { //Fetching from cache 
     let entry = cache[memoryAddress];
-    if(entry === null){
+    if (entry === null) {
         fetchToCache(memoryAddress);
         // console.log("memory to fetch to cache: ",memoryAddress);
         // cacheMiss=true;
         // entry = cache.find(entry => entry.data === memoryData);
         entry = cache[memoryAddress];
-        console.log("ENTRY",entry);
+        console.log("ENTRY", entry);
     }
     return entry;
 }
@@ -150,7 +150,7 @@ function fetchFromCache(memoryAddress){ //Fetching from cache
 
 
 //5)RegisterFile
-function InitializingRegisterFile(values){ //values is an array of values
+function InitializingRegisterFile(values) { //values is an array of values
     values.forEach((value, index) => {
         RegisterFile.push({ waiting: 0, data: value }); // waiting is the field in which m1 of A0 would be written for example
     });
@@ -166,8 +166,8 @@ function fetchFromRegisterFile(registerNumber) {
     // }
 }
 
-function writeToRegisterFile(registerNumber, registerData, registerWating){
-    console.log("fefWFw", registerNumber,registerData,registerWating);
+function writeToRegisterFile(registerNumber, registerData, registerWating) {
+    console.log("fefWFw", registerNumber, registerData, registerWating);
     if (registerData !== -1) { // -1 means the item wasn't found
         RegisterFile[registerNumber].data = registerData; // Update the data
     }
@@ -180,7 +180,7 @@ function writeToRegisterFile(registerNumber, registerData, registerWating){
 
 //6)Adder Reservation Station 
 //{busy, operation , Vj, Vk, Qj, Qk}
-function updateAdderReservationStation(tag, data){
+function updateAdderReservationStation(tag, data) {
     const indexj = adderReservationStation.findIndex(entry => entry.Qj === tag);
     if (indexj !== -1) { // -1 means the item wasn't found
         adderReservationStation[indexj].Vj = data;
@@ -194,27 +194,27 @@ function updateAdderReservationStation(tag, data){
     }
 }
 
-function addInstructionToAdderReservationStation(instruction){
+function addInstructionToAdderReservationStation(instruction) {
     // const index = adderReservationStation.findIndex(entry => entry.busy === 0);
-    const index = adderReservationStation.findIndex(entry => entry.operation===""); 
+    const index = adderReservationStation.findIndex(entry => entry.operation === "");
     if (index !== -1) { // -1 means the item wasn't found
-        adderReservationStation[index]= instruction;
+        adderReservationStation[index] = instruction;
     }
-    else{
+    else {
         return -1;
     }
 }
 
-function removeInstructionFromAdderReservationStation(index){
+function removeInstructionFromAdderReservationStation(index) {
     // adderReservationStation[index].busy= 0;
-    adderReservationStation[index] = { busy:0 , operation:"", Vj: 0, Vk: 0, Qj: 0, Qk: 0};
+    adderReservationStation[index] = { busy: 0, operation: "", Vj: 0, Vk: 0, Qj: 0, Qk: 0 };
 }
 //---------------------------------------------------------------------------------------------------------
 
 
 //7)Multiplier Reservation Station
 //{busy, operation , Vj, Vk, Qj, Qk}
-function updateMultiplierReservationStation(tag, data){
+function updateMultiplierReservationStation(tag, data) {
     const indexj = multiplierReservationStation.findIndex(entry => entry.Qj === tag);
     if (indexj !== -1) { // -1 means the item wasn't found
         multiplierReservationStation[indexj].Vj = data;
@@ -228,47 +228,47 @@ function updateMultiplierReservationStation(tag, data){
     }
 }
 
-function addInstructionToMultiplierReservationStation(instruction){
+function addInstructionToMultiplierReservationStation(instruction) {
     // const index = multiplierReservationStation.findIndex(entry => entry.busy === 0);
     const index = multiplierReservationStation.findIndex(entry => entry.operation === "");
     if (index !== -1) { // -1 means the item wasn't found
-        multiplierReservationStation[index]= instruction;
+        multiplierReservationStation[index] = instruction;
     }
-    else{
+    else {
         return -1;
     }
 }
 
-function removeInstructionFromMultiplierReservationStation(index){
+function removeInstructionFromMultiplierReservationStation(index) {
     // multiplierReservationStation[index].busy= 0;
-    multiplierReservationStation[index] = { busy:0 , operation:"", Vj: 0, Vk: 0, Qj: 0, Qk: 0};
+    multiplierReservationStation[index] = { busy: 0, operation: "", Vj: 0, Vk: 0, Qj: 0, Qk: 0 };
 }
 //---------------------------------------------------------------------------------------------------------
 
 
 //8)Load Buffer
 //{busy,Address}
-function addInstructionToLoadBuffer(instruction){
+function addInstructionToLoadBuffer(instruction) {
     // const index = loadBuffer.findIndex(entry => entry.busy === 0);
     const index = loadBuffer.findIndex(entry => entry.entry.operation === "");
     if (index !== -1) { // -1 means the item wasn't found
-        loadBuffer[index]= instruction;
+        loadBuffer[index] = instruction;
     }
-    else{
+    else {
         return -1;
     }
 }
 
-function removeInstructionFromLoadBuffer(index){
+function removeInstructionFromLoadBuffer(index) {
     // loadBuffer[index].busy= 0;
-    loadBuffer[index] = { busy:0 , address:-1};
+    loadBuffer[index] = { busy: 0, address: -1 };
 }
 //---------------------------------------------------------------------------------------------------------
 
 
 //9)Store Buffer
 //{busy,Address, V, Q}
-function updateStoreBuffer(tag, data){
+function updateStoreBuffer(tag, data) {
     const index = storeBuffer.findIndex(entry => entry.Q === tag);
     if (index !== -1) { // -1 means the item wasn't found
         storeBuffer[index].V = data;
@@ -278,48 +278,48 @@ function updateStoreBuffer(tag, data){
     }
 }
 
-function addInstructionToStoreBuffer(instruction){
+function addInstructionToStoreBuffer(instruction) {
     // const index = storeBuffer.findIndex(entry => entry.busy === 0);
     const index = storeBuffer.findIndex(entry => entry.operation === "");
     if (index !== -1) { // -1 means the item wasn't found
-        storeBuffer[index]= instruction;
+        storeBuffer[index] = instruction;
     }
-    else{
+    else {
         return -1;
     }
 }
 
-function removeInstructionFromStoreBuffer(index){
+function removeInstructionFromStoreBuffer(index) {
     // storeBuffer[index].busy= 0;
-    storeBuffer[index] = { busy:0 , address:-1 , V: 0, Q: 0};
+    storeBuffer[index] = { busy: 0, address: -1, V: 0, Q: 0 };
 }
 //---------------------------------------------------------------------------------------------------------
 
 //10)Adder
-function ALU(operation, operand1, operand2){
-        if(ADD.includes(operation)){
-            return operand1 + operand2;
-        }
-        else if(SUB.includes(operation)){
-            return operand1 - operand2;
-        }
-        else if( MUL.includes(operation)){
-            return operand1 * operand2;
-        }
-        else if(DIV.includes(operation)){
-            if (operand2 === 0) {
-                throw new Error("Division by zero is not allowed.");
-            }
-            return operand1 / operand2;
-        } // Division
+function ALU(operation, operand1, operand2) {
+    if (ADD.includes(operation)) {
+        return operand1 + operand2;
     }
-    
-    
+    else if (SUB.includes(operation)) {
+        return operand1 - operand2;
+    }
+    else if (MUL.includes(operation)) {
+        return operand1 * operand2;
+    }
+    else if (DIV.includes(operation)) {
+        if (operand2 === 0) {
+            throw new Error("Division by zero is not allowed.");
+        }
+        return operand1 / operand2;
+    } // Division
+}
+
+
 
 //---------------------------------------------------------------------------------------------------------
 
 //11)Bus
-function publishToBus(tag, data){
+function publishToBus(tag, data) {
     console.log("published", tag, data);
 
     const registerNumber = RegisterFile.findIndex(entry => entry.waiting === tag);
@@ -335,26 +335,26 @@ function publishToBus(tag, data){
 function issueInstruction() {
 
     const { operation, operand1, operand2, destination } = fetchInstruction();
-    
+
     let issued = false; // Flag to check if the instruction was successfully issued bec reservation station full
-    
-    
-    
+
+
+
     // console.log("operation: ",{ operation, operand1, operand2, destination });
     const qj = fetchFromRegisterFile(operand1).waiting;
     const qk = fetchFromRegisterFile(operand2).waiting;
     const vj = fetchFromRegisterFile(operand1).data;
     const vk = fetchFromRegisterFile(operand2).data;
-    console.log("operand1",operand1);
-    console.log("operand2",operand2);
-    const { waiting, value} = fetchFromRegisterFile(operand2);
-    console.log("vj,qj,vk,qk: ", vj,qj,vk,qk);
+    console.log("operand1", operand1);
+    console.log("operand2", operand2);
+    const { waiting, value } = fetchFromRegisterFile(operand2);
+    console.log("vj,qj,vk,qk: ", vj, qj, vk, qk);
     // Check the operation type and find the appropriate station
-    if ( ADD.includes(operation) || SUB.includes(operation)) {
+    if (ADD.includes(operation) || SUB.includes(operation)) {
         const index = adderReservationStation.findIndex(entry => entry.busy === 0);
         if (index !== -1) {
             adderReservationStation[index] = {
-                busy: addLatency+1,
+                busy: addLatency + 1,
                 operation: operation,
                 Vj: vj,
                 Vk: vk,
@@ -364,12 +364,12 @@ function issueInstruction() {
             };
             issued = true;
         }
-        writeToRegisterFile(destination,-1,"A"+index);
+        writeToRegisterFile(destination, -1, "A" + index);
     } else if (MUL.includes(operation) || DIV.includes(operation)) {
         const index = multiplierReservationStation.findIndex(entry => entry.busy === 0);
         if (index !== -1) {
             multiplierReservationStation[index] = {
-                busy: multLatency+1,
+                busy: multLatency + 1,
                 operation: operation,
                 Vj: vj,
                 Vk: vk,
@@ -379,26 +379,27 @@ function issueInstruction() {
             };
             issued = true;
         }
-        writeToRegisterFile(destination,-1,"M"+index);
+        writeToRegisterFile(destination, -1, "M" + index);
     } else if (LOAD.includes(operation)) {
         const index = loadBuffer.findIndex(entry => entry.busy === 0);
         if (index !== -1) {
-            loadBuffer[index] = { 
-                busy: loadLatency+1, 
-                address: operand1, 
+            loadBuffer[index] = {
+                busy: loadLatency + 1,
+                address: operand1,
                 result: 0
             };
             issued = true;
         }
-        writeToRegisterFile(destination,-1,"L" + index);
+        writeToRegisterFile(destination, -1, "L" + index);
     } else if (STORE.includes(operation)) {
         const index = storeBuffer.findIndex(entry => entry.busy === 0);
         if (index !== -1) {
-            storeBuffer[index] = { 
-                busy: storeLatency+1, 
-                address: destination, 
-                V: vj, 
-                Q: qj };
+            storeBuffer[index] = {
+                busy: storeLatency + 1,
+                address: destination,
+                V: vj,
+                Q: qj
+            };
             issued = true;
         }
     } else {
@@ -407,7 +408,7 @@ function issueInstruction() {
 
     // If the instruction couldn't be issued, dont move to issue the next instruction (stall)
     if (!issued) {
-        pc-=1;
+        pc -= 1;
     }
 }
 
@@ -415,7 +416,7 @@ function execute() {
     // Execute instructions in Adder Reservation Stations
     for (let i = 0; i < adderReservationStation.length; i++) {
         const station = adderReservationStation[i];
-        if(station.busy>0 && station.Qj === 0 && station.Qk === 0){
+        if (station.busy > 0 && station.Qj === 0 && station.Qk === 0) {
             adderReservationStation[i].busy -= 1; // subtract from busy to simulate latency
         }
         if (station.busy === 1 && station.operation !== "") {
@@ -427,7 +428,7 @@ function execute() {
     // Execute instructions in Multiplier Reservation Stations
     for (let i = 0; i < multiplierReservationStation.length; i++) {
         const station = multiplierReservationStation[i];
-        if(station.busy>0 && station.Qj === 0 && station.Qk === 0){
+        if (station.busy > 0 && station.Qj === 0 && station.Qk === 0) {
             multiplierReservationStation[i].busy -= 1; // subtract from busy to simulate execution latency
         }
         if (station.busy === 1 && station.operation !== "") {
@@ -439,11 +440,11 @@ function execute() {
     // Execute Load Buffer
     for (let i = 0; i < loadBuffer.length; i++) { // deal with cache miss here
         const buffer = loadBuffer[i];
-        if (buffer.busy>0) { // Data is not yet fetched
+        if (buffer.busy > 0) { // Data is not yet fetched
             loadBuffer[i].busy -= 1;
         }
-        if(buffer.busy===1 && buffer.address !== -1){//PROBLEM
-        //     console.log("problem")
+        if (buffer.busy === 1 && buffer.address !== -1) {//PROBLEM
+            //     console.log("problem")
             const memoryData = fetchFromCache(buffer.address); // Simulate memory access
             loadBuffer[i].result = memoryData; // Fetch the data
         }
@@ -452,7 +453,7 @@ function execute() {
     // Execute Store Buffer
     for (let i = 0; i < storeBuffer.length; i++) {
         const buffer = storeBuffer[i];
-        if(buffer.busy>0 && buffer.Q === 0){
+        if (buffer.busy > 0 && buffer.Q === 0) {
             storeBuffer[i].busy -= 1;
         }
         if (buffer.busy === 1 && buffer.address !== -1) { // Data is ready for storing
@@ -472,7 +473,7 @@ function writeBack() {
         if (station.busy === 0 && station.operation !== "") { // Execution completed
             let result = station.result;
             let tag = "A" + i;
-            writeBackArray.push({tag, result});
+            writeBackArray.push({ tag, result });
             removeInstructionFromAdderReservationStation(i); // Free the reservation station
         }
     }
@@ -483,7 +484,7 @@ function writeBack() {
         if (station.busy === 0 && station.operation !== "") { // Execution completed
             let result = station.result;
             let tag = "M" + i;
-            writeBackArray.push({tag, result});
+            writeBackArray.push({ tag, result });
             removeInstructionFromMultiplierReservationStation(i); // Free the reservation station
         }
     }
@@ -496,7 +497,7 @@ function writeBack() {
             // writeBackArray.push({destination, result});
             let result = buffer.result;
             let tag = "L" + i;
-            writeBackArray.push({tag, result});
+            writeBackArray.push({ tag, result });
             // const memoryData = fetchFromCache(buffer.address); // Simulate memory access
             // const register = RegisterFile.find(register => register.waiting === "L" + i);
             // register.data = memoryData; // Fetch the data
@@ -517,7 +518,7 @@ function writeBack() {
 
 
     console.log("writeback array: ", writeBackArray);
-    if(writeBackArray.length !== 0){
+    if (writeBackArray.length !== 0) {
         let temp = writeBackArray.shift();
         publishToBus(temp.tag, temp.result); // Broadcast result on the CDB
     }
@@ -525,62 +526,96 @@ function writeBack() {
 
 //---------------------------------------------------------------------------------------------------------
 
+function formatInstructions(instructions) {
+    const instructionStrings = instructions.map(instruction => {
+        let string = instruction.operation;
+        if (["L.S", "L.D", "LW", "LD"].includes(instruction.operation)) {
+            string += ` ${instruction.destination < 32 ? "F" + instruction.destination : "R" + (instruction.destination - 32)}, ${instruction.operand1}`;
+        }
+        else if (["S.S", "S.D", "SW", "SD"].includes(instruction.operation)) {
+            string += ` ${instruction.operand1 < 32 ? "F" + instruction.operand1 : "R" + (instruction.operand1 - 32)}, ${instruction.destination}`;
+        }
+        else if (["BEQ", "BNE"].includes(instruction.operation)) {
+            string += ` ${instruction.operand1 < 32 ? "F" + instruction.operand1 : "R" + (instruction.operand1 - 32)}, ${instruction.operand2 < 32 ? "F" + instruction.operand2 : "R" + (instruction.operand2 - 32)}, ${instruction.destination}`;
+        }
+        else if (["DADDI", "DSUBI"].includes(instruction.operation)) {
+            string += ` ${instruction.destination < 32 ? "F" + instruction.destination : "R" + (instruction.destination - 32)}, ${instruction.operand1 < 32 ? "F" + instruction.operand1 : "R" + (instruction.operand1 - 32)}, ${instruction.operand2}`;
+        }
+        else {
+            string += ` ${instruction.destination < 32 ? "F" + instruction.destination : "R" + (instruction.destination - 32)}, ${instruction.operand1 < 32 ? "F" + instruction.operand1 : "R" + (instruction.operand1 - 32)}, ${instruction.operand2 < 32 ? "F" + instruction.operand2 : "R" + (instruction.operand2 - 32)}`;
+        }
+        return string;
+    });
+    const formattedInstructions = instructionStrings.map((instruction) => {
+        return {
+            instruction: instruction,
+            issue: "",
+            execute: "",
+            writeResult: "",
+        };
+    });
+    return formattedInstructions;
+}
 
 
-
-function main() {
+async function main(stationSizes, instructionLatencies, instructions, setInstructionQueue, setAddData, setMultData, setLoadData, setStoreData, setIntRegData, setFpRegData) {
     // Initialize Hardware
-    const adderResSize = 3;   // Number of adder reservation stations
-    const multResSize = 2;    // Number of multiplier reservation stations
-    const loadBufferSize = 3; // Size of the load buffer
-    const storeBufferSize = 3; // Size of the store buffer
+    // const adderResSize = 3;   // Number of adder reservation stations
+    // const multResSize = 2;    // Number of multiplier reservation stations
+    // const loadBufferSize = 3; // Size of the load buffer
+    // const storeBufferSize = 3; // Size of the store buffer
 
-    const addLatency = 2;     // Latency for addition/subtraction
-    const multLatency = 10;   // Latency for multiplication/division
-    const loadLatency = 2;    // Latency for load
-    const storeLatency = 2;   // Latency for store
+    // const addLatency = 2;     // Latency for addition/subtraction
+    // const multLatency = 10;   // Latency for multiplication/division
+    // const loadLatency = 2;    // Latency for load
+    // const storeLatency = 2;   // Latency for store
 
-    init(adderResSize, multResSize, loadBufferSize, storeBufferSize, addLatency, multLatency, loadLatency, storeLatency);
+    const { fpAdders, fpMultipliers, loadBuffers, storeBuffers } = stationSizes;
+    const { fpAdd, fpMult, load, store } = instructionLatencies;
+
+    init(fpAdders, fpMultipliers, loadBuffers, storeBuffers, fpAdd, fpMult, load, store);
+    // init(adderResSize, multResSize, loadBufferSize, storeBufferSize, addLatency, multLatency, loadLatency, storeLatency);
 
     // Load Instructions
-    Instructions.push(
-        { operation: "L.D", destination: 6, immediate: 0 },      // L.D F6, 0
-        { operation: "L.D", destination: 2, immediate: 4 },      // L.D F2, 4
-        { operation: "MUL.D", destination: 0, source: 2, target: 4 }, // MUL.D F0, F2, F4
-        { operation: "SUB.D", destination: 8, source: 2, target: 6 }, // SUB.D F8, F2, F6
-        { operation: "DIV.D", destination: 10, source: 0, target: 6 }, // DIV.D F10, F0, F6
-        { operation: "ADD.D", destination: 6, source: 8, target: 2 }, // ADD.D F6, F8, F2
-        { operation: "S.D", source: 6, immediate: 0 }          // S.D F6, 0
-    );
+    // Instructions.push(
+    //     { operation: "L.D", destination: 6, immediate: 0 },      // L.D F6, 0
+    //     { operation: "L.D", destination: 2, immediate: 4 },      // L.D F2, 4
+    //     { operation: "MUL.D", destination: 0, source: 2, target: 4 }, // MUL.D F0, F2, F4
+    //     { operation: "SUB.D", destination: 8, source: 2, target: 6 }, // SUB.D F8, F2, F6
+    //     { operation: "DIV.D", destination: 10, source: 0, target: 6 }, // DIV.D F10, F0, F6
+    //     { operation: "ADD.D", destination: 6, source: 8, target: 2 }, // ADD.D F6, F8, F2
+    //     { operation: "S.D", source: 6, immediate: 0 }          // S.D F6, 0
+    // );
+    Instructions = instructions;
 
     // Initialize Memory and Register File
     InitializingMemory([10, 20, 30, 40, 50]); // Memory values at sequential addresses
-    InitializingRegisterFile([0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,0]); // Initialize registers F0-F10
+    // array of size 64 with all values initialized to 0
+    const array = Array.from({ length: 64 }, () => 0);
+    array[3] = 3;
+    array[4] = 3;
+    InitializingRegisterFile(array);
     InitializingCache([null, null, null, null, null]);
     // InitializingCache([-1, -1, -1, -1, -1]);
 
     console.log("Starting simulation...");
-    
+
     console.log(" Register File:", RegisterFile);
     console.log(" Memory:", memory);
 
     // Simulation Loop
     let cycle = 0;
-    const maxCycles = 30; // Prevent infinite loops
+    const maxCycles = 35; // Prevent infinite loops
     while (cycle < maxCycles) {
         console.log(`Cycle ${cycle}`);
-        
-       
+
         execute();
         writeBack();
-        if(pc < Instructions.length){
+        if (pc < Instructions.length) {
             issueInstruction();
         }
 
-        
-        
-
-        if (InstructionQueue.length === Instructions.length && 
+        if (InstructionQueue.length === Instructions.length &&
             adderReservationStation.every(station => station.busy === 0) &&
             multiplierReservationStation.every(station => station.busy === 0) &&
             loadBuffer.every(buffer => buffer.busy === 0) &&
@@ -588,8 +623,52 @@ function main() {
             break; // All instructions have been executed
         }
 
+        // Update the frontend
+        console.log("INSTRUCTION QUEUE: ", formatInstructions(InstructionQueue));
+        setInstructionQueue(formatInstructions(InstructionQueue));
+
+        const adderData = adderReservationStation.map((entry, index) => {
+            return { ...entry, tag: "A" + (index) };
+        });
+        console.log("ADDER STATION: ", adderData);
+        setAddData(adderData);
+
+        const multData = multiplierReservationStation.map((entry, index) => {
+            return { ...entry, tag: "M" + (index) };
+        });
+        console.log("MULTIPLIER STATION: ", multData);
+        setMultData(multData);
+
+        const loadData = loadBuffer.map((entry, index) => {
+            return { ...entry, tag: "L" + (index) };
+        });
+        console.log("LOAD BUFFER: ", loadData);
+        setLoadData(loadData);
+
+        const storeData = storeBuffer.map((entry, index) => {
+            return { ...entry, tag: "S" + (index) };
+        });
+        console.log("STORE BUFFER: ", storeData);
+        setStoreData(storeData);
+
+        let fpRegData = RegisterFile.slice(0, 32);
+        fpRegData = fpRegData.map((entry, index) => {
+            return { register: "F" + index, Qi: entry.waiting, data: entry.data };
+        });
+        console.log("FP REGISTERS: ", fpRegData);
+        setFpRegData(fpRegData);
+
+        let intRegData = RegisterFile.slice(32);
+        intRegData = intRegData.map((entry, index) => {
+            return { register: "R" + index, Qi: entry.waiting, data: entry.data };
+        });
+        console.log("INT REGISTERS: ", intRegData);
+        setIntRegData(intRegData);
+
+        await new Promise(r => setTimeout(r, 10000));
+
         cycle++;
-        
+
         console.log(" Register File:", RegisterFile);
         console.log(" Memory:", memory);
         console.log(" adder station:", adderReservationStation);
@@ -598,7 +677,7 @@ function main() {
         console.log(" store station:", storeBuffer);
         console.log(" Cache:", cache);
         // console.log(" current instruction:", currInstruction);
-        
+
     }
 
     console.log("Simulation finished.");
@@ -607,9 +686,9 @@ function main() {
 }
 
 // Run the main method
-main();
+// main();
 
-
+export default main;
 
 //----------------------------------------------------
 

@@ -85,8 +85,8 @@ function InstructionSelection({ instructions, setInstructions }) {
                     </h2>
                     <div className="w-full">
                         <ReactSelect
-                            options={Array.from({ length: 32 }, (_, i) => ({ value: `F${i}`, label: `F${i}` }))
-                                .concat(Array.from({ length: 31 }, (_, i) => ({ value: `R${i + 1}`, label: `R${i + 1}` })))}
+                            options={Array.from({ length: 32 }, (_, i) => ({ value: i, label: `F${i}` }))
+                                .concat(Array.from({ length: 31 }, (_, i) => ({ value: i + 1 + 32, label: `R${i + 1}` })))}
                             defaultValue={{ value: "F1", label: "F1" }}
                             onChange={(selectedOption) => setInstruction({ ...instruction, destination: selectedOption.value })}
                         />
@@ -100,8 +100,8 @@ function InstructionSelection({ instructions, setInstructions }) {
                     </h2>
                     <div className="w-full">
                         <ReactSelect
-                            options={Array.from({ length: 32 }, (_, i) => ({ value: `F${i}`, label: `F${i}` }))
-                                .concat(Array.from({ length: 32 }, (_, i) => ({ value: `R${i}`, label: `R${i}` })))}
+                            options={Array.from({ length: 32 }, (_, i) => ({ value: i, label: `F${i}` }))
+                                .concat(Array.from({ length: 32 }, (_, i) => ({ value: i + 32, label: `R${i}` })))}
                             defaultValue={{ value: "F0", label: "F0" }}
                             onChange={(selectedOption) => setInstruction({ ...instruction, source: selectedOption.value })}
                         />
@@ -115,8 +115,8 @@ function InstructionSelection({ instructions, setInstructions }) {
                     </h2>
                     <div className="w-full">
                         <ReactSelect
-                            options={Array.from({ length: 32 }, (_, i) => ({ value: `F${i}`, label: `F${i}` }))
-                                .concat(Array.from({ length: 32 }, (_, i) => ({ value: `R${i}`, label: `R${i}` })))}
+                            options={Array.from({ length: 32 }, (_, i) => ({ value: i, label: `F${i}` }))
+                                .concat(Array.from({ length: 32 }, (_, i) => ({ value: i + 32, label: `R${i}` })))}
                             defaultValue={{ value: "F0", label: "F0" }}
                             onChange={(selectedOption) => setInstruction({ ...instruction, target: selectedOption.value })}
                         />

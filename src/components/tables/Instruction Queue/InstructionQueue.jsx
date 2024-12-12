@@ -1,13 +1,13 @@
 import { DataTable } from "../data-table";
 import { columns } from "./columns";
 
-function InstructionQueue( { instructions } ) {
+function InstructionQueue( { instructionQueue } ) {
     return (
         <div>
             <h1 className="mb-2">
                 Instruction Queue
             </h1>
-            <DataTable columns={columns()} data={[]} />
+            <DataTable columns={columns()} data={instructionQueue} />
         </div>
     );
 }

@@ -8,7 +8,7 @@ export const columns = () => [
         header: "Busy",
     },
     {
-        accessorKey: "a",
+        accessorKey: "address",
         header: "A",
     }
 ];

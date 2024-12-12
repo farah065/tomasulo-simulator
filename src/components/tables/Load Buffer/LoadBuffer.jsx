@@ -1,13 +1,7 @@
-import { useState } from "react";
 import { DataTable } from "../data-table";
 import { columns } from "./columns";
 
-function LoadBuffer({ stationSizes }) {
-    const [data, setData] = useState(Array.from({ length: stationSizes.loadBuffers }, (_, i) => ({
-        tag: `L${i + 1}`,
-        busy: 0,
-        a: "",
-    })));
+function LoadBuffer({ data }) {
     return (
         <div>
             <h1 className="mb-2">

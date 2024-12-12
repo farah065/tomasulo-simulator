@@ -4,7 +4,7 @@ export const columns = () => [
         header: "Register",
     },
     {
-        accessorKey: "qi",
+        accessorKey: "Qi",
         header: "Qi",
     },
     {

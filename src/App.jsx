@@ -1,5 +1,5 @@
 import "./App.css";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "./components/ui/button";
 import InstructionSelection from "./components/InstructionSelection";
 import FpRegisterFile from "./components/tables/FP Register File/FpRegisterFile";
@@ -10,9 +10,52 @@ import AdditionStation from "./components/tables/Addition Station/AdditionStatio
 import MultiplicationStation from "./components/tables/Multiplication Station/MultiplicationStation";
 import LoadBuffer from "./components/tables/Load Buffer/LoadBuffer";
 import StoreBuffer from "./components/tables/Store Buffer/StoreBuffer";
+import main from "./logic";
 
 function App() {
-    const [instructions, setInstructions] = useState([]);
+    // const [instructions, setInstructions] = useState([]);
+    const [instructions, setInstructions] = useState([
+        {
+            "operation": "L.D",
+            "destination": 6,
+            "immediate": 0
+        },
+        {
+            "operation": "L.D",
+            "destination": 2,
+            "immediate": 4
+        },
+        {
+            "operation": "MUL.D",
+            "destination": 0,
+            "source": 2,
+            "target": 4
+        },
+        {
+            "operation": "SUB.D",
+            "destination": 8,
+            "source": 2,
+            "target": 6
+        },
+        {
+            "operation": "DIV.D",
+            "destination": 10,
+            "source": 0,
+            "target": 6
+        },
+        {
+            "operation": "ADD.D",
+            "destination": 6,
+            "source": 8,
+            "target": 2
+        },
+        {
+            "operation": "S.D",
+            "source": 6,
+            "immediate": 4
+        }
+    ]);
+    const [instructionQueue, setInstructionQueue] = useState([]);
     const [stationSizes, setStationSizes] = useState({
         fpAdders: 3,
         fpMultipliers: 2,
@@ -31,23 +74,20 @@ function App() {
     function formatInstructions(instructions) {
         const instructionStrings = instructions.map(instruction => {
             let string = instruction.operation;
-            if (!instruction.operation) {
-                string = instruction;
-            }
-            else if (["L.S", "L.D", "LW", "LD"].includes(instruction.operation)) {
-                string += ` ${instruction.destination}, ${instruction.immediate}`;
+            if (["L.S", "L.D", "LW", "LD"].includes(instruction.operation)) {
+                string += ` ${instruction.destination < 32 ? "F" + instruction.destination : "R" + (instruction.destination - 32)}, ${instruction.immediate}`;
             }
             else if (["S.S", "S.D", "SW", "SD"].includes(instruction.operation)) {
-                string += ` ${instruction.source}, ${instruction.immediate}`;
+                string += ` ${instruction.source < 32 ? "F" + instruction.source : "R" + (instruction.source - 32)}, ${instruction.immediate}`;
             }
             else if (["BEQ", "BNE"].includes(instruction.operation)) {
-                string += ` ${instruction.source}, ${instruction.target}, ${instruction.immediate}`;
+                string += ` ${instruction.source < 32 ? "F" + instruction.source : "R" + (instruction.source - 32)}, ${instruction.target < 32 ? "F" + instruction.target : "R" + (instruction.target - 32)}, ${instruction.immediate}`;
             }
             else if (["DADDI", "DSUBI"].includes(instruction.operation)) {
-                string += ` ${instruction.destination}, ${instruction.source}, ${instruction.immediate}`;
+                string += ` ${instruction.destination < 32 ? "F" + instruction.destination : "R" + (instruction.destination - 32)}, ${instruction.source < 32 ? "F" + instruction.source : "R" + (instruction.source - 32)}, ${instruction.immediate}`;
             }
             else {
-                string += ` ${instruction.destination}, ${instruction.source}, ${instruction.target}`;
+                string += ` ${instruction.destination < 32 ? "F" + instruction.destination : "R" + (instruction.destination - 32)}, ${instruction.source < 32 ? "F" + instruction.source : "R" + (instruction.source - 32)}, ${instruction.target < 32 ? "F" + instruction.target : "R" + (instruction.target - 32)}`;
             }
             return string;
         });
@@ -60,6 +100,58 @@ function App() {
             };
         });
         return formattedInstructions;
+    }
+
+    const [addData, setAddData] = useState(Array.from({ length: stationSizes.fpAdders }, (_, i) => ({
+        tag: `A${i + 1}`,
+        busy: 0,
+        vj: "",
+        vk: "",
+        qj: "",
+        qk: "",
+        a: "",
+    })));
+
+    const [multData, setMultData] = useState(Array.from({ length: stationSizes.fpMultipliers }, (_, i) => ({
+        tag: `M${i + 1}`,
+        busy: 0,
+        vj: "",
+        vk: "",
+        qj: "",
+        qk: "",
+        a: "",
+    })));
+
+    const [loadData, setLoadData] = useState(Array.from({ length: stationSizes.loadBuffers }, (_, i) => ({
+        tag: `L${i + 1}`,
+        busy: 0,
+        a: "",
+    })));
+
+    const [storeData, setStoreData] = useState(Array.from({ length: stationSizes.storeBuffers }, (_, i) => ({
+        tag: `S${i + 1}`,
+        busy: 0,
+        a: "",
+    })));
+
+    const intRegs = Array.from({ length: 32 }, (_, i) => `R${i}`);
+    const [intRegData, setIntRegData] = useState(intRegs.map((register) => ({
+        register,
+        qi: null,
+        data: 0,
+    })));
+
+    const fpRegs = Array.from({ length: 32 }, (_, i) => `F${i}`);
+    const [fpRegData, setFpRegData] = useState(fpRegs.map((register) => ({
+        register,
+        qi: null,
+        data: 0,
+    })));
+
+    function startSimulation() {
+        console.log(instructions);
+        main(stationSizes, instructionLatencies, instructions, setInstructionQueue, setAddData, setMultData, setLoadData, setStoreData, setIntRegData, setFpRegData);
+        setPage(1);
     }
 
     return (
@@ -96,7 +188,7 @@ function App() {
                         </div>
                     </div>
                     <div className="w-2/3">
-                        <Button className="w-full justify-center" onClick={() => setPage(1)}>
+                        <Button className="w-full justify-center" onClick={() => startSimulation()}>
                             Start Simulation
                         </Button>
                     </div>
@@ -109,18 +201,17 @@ function App() {
                     </h1>
                     <div className="grid grid-cols-10 gap-12">
                         <div className="flex flex-col gap-12 col-span-4">
-                            <InstructionQueue instructions={instructions} />
+                            <InstructionQueue instructionQueue={instructionQueue} />
                             <div className="flex gap-12">
-                                <FpRegisterFile />
-                                <IntegerRegisterFile />
+                                <FpRegisterFile data={fpRegData} />
+                                <IntegerRegisterFile data={intRegData} />
                             </div>
                         </div>
                         <div className="flex flex-col gap-12 col-span-4">
-                            <AdditionStation stationSizes={stationSizes} />
-                            <MultiplicationStation stationSizes={stationSizes} />
-                            <LoadBuffer stationSizes={stationSizes} />
-                            <StoreBuffer stationSizes={stationSizes} />
-                            {console.log("SIZES:", stationSizes)}
+                            <AdditionStation data={addData} />
+                            <MultiplicationStation data={multData} />
+                            <LoadBuffer data={loadData} />
+                            <StoreBuffer data={storeData} />
                         </div>
                         <div className="col-span-2">
                             <h2 className="text-xl mb-3">
