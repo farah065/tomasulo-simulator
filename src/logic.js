@@ -93,6 +93,8 @@ function fetchInstruction() {
 
         InstructionQueue.push(currInstruction); // Add it to the queue
         pc++; // Increment the program counter to point to the next instruction
+        // return currInstruction with added id field containing its index in the queue
+        currInstruction.id = InstructionQueue.length - 1;
         return currInstruction;
     } else {
         console.log("No more instructions to fetch.");
@@ -334,7 +336,7 @@ function publishToBus(tag, data) {
 //12)Instruction Cycle
 function issueInstruction(cycle) {
 
-    const { operation, operand1, operand2, destination } = fetchInstruction();
+    const { operation, operand1, operand2, destination, id } = fetchInstruction();
 
     let issued = false; // Flag to check if the instruction was successfully issued bec reservation station full
 
@@ -358,7 +360,8 @@ function issueInstruction(cycle) {
                 Vk: vk,
                 Qj: qj,
                 Qk: qk,
-                result: 0
+                result: 0,
+                id: id
             };
             issued = true;
         }
@@ -373,7 +376,8 @@ function issueInstruction(cycle) {
                 Vk: vk,
                 Qj: qj,
                 Qk: qk,
-                result: 0
+                result: 0,
+                id: id
             };
             issued = true;
         }
@@ -384,7 +388,8 @@ function issueInstruction(cycle) {
             loadBuffer[index] = {
                 busy: loadLatency + 1,
                 address: operand1,
-                result: 0
+                result: 0,
+                id: id
             };
             issued = true;
         }
@@ -396,7 +401,8 @@ function issueInstruction(cycle) {
                 busy: storeLatency + 1,
                 address: destination,
                 V: vj,
-                Q: qj
+                Q: qj,
+                id: id
             };
             issued = true;
         }
@@ -551,7 +557,7 @@ function formatInstructions(instructions) {
         return {
             instruction: instruction,
             issue: instructions[index].issue || "",
-            execute: "",
+            execute: instructions[index].execute || "",
             writeResult: "",
         };
     });
@@ -717,6 +723,41 @@ async function advanceCycle(cycle) {
         multiplierReservationStation.every(station => station.busy === 0) &&
         loadBuffer.every(buffer => buffer.busy === 0) &&
         storeBuffer.every(buffer => buffer.busy === 0);
+
+    // Iterate through each instruction in the instruction queue
+    for (let i = 0; i < InstructionQueue.length; i++) {
+        const instruction = InstructionQueue[i];
+        if (instruction.issue !== cycle) {
+            let station;
+            if (ADD.includes(instruction.operation) || SUB.includes(instruction.operation)) {
+                station = adderReservationStation;
+            } else if (MUL.includes(instruction.operation) || DIV.includes(instruction.operation)) {
+                station = multiplierReservationStation;
+            } else if (LOAD.includes(instruction.operation)) {
+                station = loadBuffer;
+            } else if (STORE.includes(instruction.operation)) {
+                station = storeBuffer;
+            }
+
+            if (station) {
+                for (let j = 0; j < station.length; j++) {
+                    const entry = station[j];
+                    if (entry.id === i) {
+                        const latency = ADD.includes(instruction.operation) || SUB.includes(instruction.operation) ? addLatency :
+                                        MUL.includes(instruction.operation) || DIV.includes(instruction.operation) ? multLatency :
+                                        LOAD.includes(instruction.operation) ? loadLatency : storeLatency;
+
+                        if (entry.busy === latency && ((entry.Qj === 0 && entry.Qk === 0) || (entry.Q === 0) || LOAD.includes(instruction.operation))) {
+                            InstructionQueue[i].execute = `${cycle}...`;
+                        }
+                        else if (entry.busy === 1 && instruction.execute && instruction.execute.slice(-3) === "...") {
+                            InstructionQueue[i].execute = InstructionQueue[i].execute + cycle;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     // Prepare frontend update data
     const frontendUpdate = {

@@ -24,5 +24,13 @@ export const columns = () => [
 				<span>{address == -1 ? 0 : address}</span>
 			);
 		},
-    }
+    },
+    {
+        accessorKey: "V",
+        header: "V",
+    },
+    {
+        accessorKey: "Q",
+        header: "Q",
+    },
 ];
