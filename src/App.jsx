@@ -10,7 +10,7 @@ import AdditionStation from "./components/tables/Addition Station/AdditionStatio
 import MultiplicationStation from "./components/tables/Multiplication Station/MultiplicationStation";
 import LoadBuffer from "./components/tables/Load Buffer/LoadBuffer";
 import StoreBuffer from "./components/tables/Store Buffer/StoreBuffer";
-import main from "./logic";
+import { initializeSimulation, advanceCycle } from "./logic";
 
 function App() {
     // const [instructions, setInstructions] = useState([]);
@@ -148,10 +148,34 @@ function App() {
         data: 0,
     })));
 
-    function startSimulation() {
-        console.log(instructions);
-        main(stationSizes, instructionLatencies, instructions, setInstructionQueue, setAddData, setMultData, setLoadData, setStoreData, setIntRegData, setFpRegData);
+    async function startSimulation() {
+        // make sure all station sizes are ints
+        const intStations = Object.fromEntries(Object.entries(stationSizes).map(([key, value]) => [key, parseInt(value)]));
+        // make sure all instruction latencies are ints
+        const intLatencies = Object.fromEntries(Object.entries(instructionLatencies).map(([key, value]) => [key, parseInt(value)]));
+        const result = await initializeSimulation(intStations, intLatencies, instructions);
+        console.log("RESULT: ", result);
+        setInstructionQueue(result.frontendUpdate.instructionQueue);
+        setAddData(result.frontendUpdate.addData);
+        setMultData(result.frontendUpdate.multData);
+        setLoadData(result.frontendUpdate.loadData);
+        setStoreData(result.frontendUpdate.storeData);
+        setFpRegData(result.frontendUpdate.fpRegData);
+        setIntRegData(result.frontendUpdate.intRegData);
+        setCycle(result.currentCycle);
         setPage(1);
+    }
+
+    async function advance() {
+        const result = await advanceCycle(cycle + 1);
+        setInstructionQueue(result.frontendUpdate.instructionQueue);
+        setAddData(result.frontendUpdate.addData);
+        setMultData(result.frontendUpdate.multData);
+        setLoadData(result.frontendUpdate.loadData);
+        setStoreData(result.frontendUpdate.storeData);
+        setFpRegData(result.frontendUpdate.fpRegData);
+        setIntRegData(result.frontendUpdate.intRegData);
+        setCycle(cycle + 1);
     }
 
     return (
@@ -226,7 +250,7 @@ function App() {
                             </div>
                         </div>
                     </div>
-                    <Button onClick={() => setCycle(cycle + 1)} className="fixed bottom-8 right-14">
+                    <Button onClick={() => advance()} className="fixed bottom-8 right-14">
                         Next Cycle
                     </Button>
                 </div>

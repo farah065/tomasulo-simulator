@@ -6,6 +6,13 @@ export const columns = () => [
     {
         accessorKey: "issue",
         header: "Issue",
+        cell: ({ row }) => {
+			const issue = row.original.issue;
+
+			return (
+				<span>{issue == 0? "0" : issue}</span>
+			);
+		},
     },
     {
         accessorKey: "execute",

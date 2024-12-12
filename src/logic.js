@@ -332,13 +332,11 @@ function publishToBus(tag, data) {
 //---------------------------------------------------------------------------------------------------------
 
 //12)Instruction Cycle
-function issueInstruction() {
+function issueInstruction(cycle) {
 
     const { operation, operand1, operand2, destination } = fetchInstruction();
 
     let issued = false; // Flag to check if the instruction was successfully issued bec reservation station full
-
-
 
     // console.log("operation: ",{ operation, operand1, operand2, destination });
     const qj = fetchFromRegisterFile(operand1).waiting;
@@ -409,6 +407,9 @@ function issueInstruction() {
     // If the instruction couldn't be issued, dont move to issue the next instruction (stall)
     if (!issued) {
         pc -= 1;
+    }
+    else {
+        InstructionQueue[InstructionQueue.length - 1].issue = cycle;
     }
 }
 
@@ -546,10 +547,10 @@ function formatInstructions(instructions) {
         }
         return string;
     });
-    const formattedInstructions = instructionStrings.map((instruction) => {
+    const formattedInstructions = instructionStrings.map((instruction, index) => {
         return {
             instruction: instruction,
-            issue: "",
+            issue: instructions[index].issue || "",
             execute: "",
             writeResult: "",
         };
@@ -558,43 +559,34 @@ function formatInstructions(instructions) {
 }
 
 
-async function main(stationSizes, instructionLatencies, instructions, setInstructionQueue, setAddData, setMultData, setLoadData, setStoreData, setIntRegData, setFpRegData) {
+function main() {
     // Initialize Hardware
-    // const adderResSize = 3;   // Number of adder reservation stations
-    // const multResSize = 2;    // Number of multiplier reservation stations
-    // const loadBufferSize = 3; // Size of the load buffer
-    // const storeBufferSize = 3; // Size of the store buffer
+    const adderResSize = 3;   // Number of adder reservation stations
+    const multResSize = 2;    // Number of multiplier reservation stations
+    const loadBufferSize = 3; // Size of the load buffer
+    const storeBufferSize = 3; // Size of the store buffer
 
-    // const addLatency = 2;     // Latency for addition/subtraction
-    // const multLatency = 10;   // Latency for multiplication/division
-    // const loadLatency = 2;    // Latency for load
-    // const storeLatency = 2;   // Latency for store
+    const addLatency = 2;     // Latency for addition/subtraction
+    const multLatency = 10;   // Latency for multiplication/division
+    const loadLatency = 2;    // Latency for load
+    const storeLatency = 2;   // Latency for store
 
-    const { fpAdders, fpMultipliers, loadBuffers, storeBuffers } = stationSizes;
-    const { fpAdd, fpMult, load, store } = instructionLatencies;
-
-    init(fpAdders, fpMultipliers, loadBuffers, storeBuffers, fpAdd, fpMult, load, store);
-    // init(adderResSize, multResSize, loadBufferSize, storeBufferSize, addLatency, multLatency, loadLatency, storeLatency);
+    init(adderResSize, multResSize, loadBufferSize, storeBufferSize, addLatency, multLatency, loadLatency, storeLatency);
 
     // Load Instructions
-    // Instructions.push(
-    //     { operation: "L.D", destination: 6, immediate: 0 },      // L.D F6, 0
-    //     { operation: "L.D", destination: 2, immediate: 4 },      // L.D F2, 4
-    //     { operation: "MUL.D", destination: 0, source: 2, target: 4 }, // MUL.D F0, F2, F4
-    //     { operation: "SUB.D", destination: 8, source: 2, target: 6 }, // SUB.D F8, F2, F6
-    //     { operation: "DIV.D", destination: 10, source: 0, target: 6 }, // DIV.D F10, F0, F6
-    //     { operation: "ADD.D", destination: 6, source: 8, target: 2 }, // ADD.D F6, F8, F2
-    //     { operation: "S.D", source: 6, immediate: 0 }          // S.D F6, 0
-    // );
-    Instructions = instructions;
+    Instructions.push(
+        { operation: "L.D", destination: 6, immediate: 0 },      // L.D F6, 0
+        { operation: "L.D", destination: 2, immediate: 4 },      // L.D F2, 4
+        { operation: "MUL.D", destination: 0, source: 2, target: 4 }, // MUL.D F0, F2, F4
+        { operation: "SUB.D", destination: 8, source: 2, target: 6 }, // SUB.D F8, F2, F6
+        { operation: "DIV.D", destination: 10, source: 0, target: 6 }, // DIV.D F10, F0, F6
+        { operation: "ADD.D", destination: 6, source: 8, target: 2 }, // ADD.D F6, F8, F2
+        { operation: "S.D", source: 6, immediate: 0 }          // S.D F6, 0
+    );
 
     // Initialize Memory and Register File
     InitializingMemory([10, 20, 30, 40, 50]); // Memory values at sequential addresses
-    // array of size 64 with all values initialized to 0
-    const array = Array.from({ length: 64 }, () => 0);
-    array[3] = 3;
-    array[4] = 3;
-    InitializingRegisterFile(array);
+    InitializingRegisterFile([0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]); // Initialize registers F0-F10
     InitializingCache([null, null, null, null, null]);
     // InitializingCache([-1, -1, -1, -1, -1]);
 
@@ -605,15 +597,19 @@ async function main(stationSizes, instructionLatencies, instructions, setInstruc
 
     // Simulation Loop
     let cycle = 0;
-    const maxCycles = 35; // Prevent infinite loops
+    const maxCycles = 30; // Prevent infinite loops
     while (cycle < maxCycles) {
         console.log(`Cycle ${cycle}`);
+
 
         execute();
         writeBack();
         if (pc < Instructions.length) {
             issueInstruction();
         }
+
+
+
 
         if (InstructionQueue.length === Instructions.length &&
             adderReservationStation.every(station => station.busy === 0) &&
@@ -622,50 +618,6 @@ async function main(stationSizes, instructionLatencies, instructions, setInstruc
             storeBuffer.every(buffer => buffer.busy === 0)) {
             break; // All instructions have been executed
         }
-
-        // Update the frontend
-        console.log("INSTRUCTION QUEUE: ", formatInstructions(InstructionQueue));
-        setInstructionQueue(formatInstructions(InstructionQueue));
-
-        const adderData = adderReservationStation.map((entry, index) => {
-            return { ...entry, tag: "A" + (index) };
-        });
-        console.log("ADDER STATION: ", adderData);
-        setAddData(adderData);
-
-        const multData = multiplierReservationStation.map((entry, index) => {
-            return { ...entry, tag: "M" + (index) };
-        });
-        console.log("MULTIPLIER STATION: ", multData);
-        setMultData(multData);
-
-        const loadData = loadBuffer.map((entry, index) => {
-            return { ...entry, tag: "L" + (index) };
-        });
-        console.log("LOAD BUFFER: ", loadData);
-        setLoadData(loadData);
-
-        const storeData = storeBuffer.map((entry, index) => {
-            return { ...entry, tag: "S" + (index) };
-        });
-        console.log("STORE BUFFER: ", storeData);
-        setStoreData(storeData);
-
-        let fpRegData = RegisterFile.slice(0, 32);
-        fpRegData = fpRegData.map((entry, index) => {
-            return { register: "F" + index, Qi: entry.waiting, data: entry.data };
-        });
-        console.log("FP REGISTERS: ", fpRegData);
-        setFpRegData(fpRegData);
-
-        let intRegData = RegisterFile.slice(32);
-        intRegData = intRegData.map((entry, index) => {
-            return { register: "R" + index, Qi: entry.waiting, data: entry.data };
-        });
-        console.log("INT REGISTERS: ", intRegData);
-        setIntRegData(intRegData);
-
-        await new Promise(r => setTimeout(r, 10000));
 
         cycle++;
 
@@ -685,10 +637,131 @@ async function main(stationSizes, instructionLatencies, instructions, setInstruc
     console.log("Final Memory:", memory);
 }
 
+// Simulation management function
+async function initializeSimulation(stationSizes, instructionLatencies, instructions) {
+    console.log("STATION SIZES: ", stationSizes)
+    console.log("INSTRUCTION LATENCIES: ", instructionLatencies)
+    // Initialize Hardware
+    const { fpAdders, fpMultipliers, loadBuffers, storeBuffers } = stationSizes;
+    const { fpAdd, fpMult, load, store } = instructionLatencies;
+
+    // Reset all simulation state
+    init(fpAdders, fpMultipliers, loadBuffers, storeBuffers, fpAdd, fpMult, load, store);
+
+    // Load Instructions
+    Instructions = instructions;
+
+    // Initialize Memory and Register File
+    InitializingMemory([10, 20, 30, 40, 50]); // Memory values at sequential addresses
+    const array = Array.from({ length: 64 }, () => 0);
+    array[3] = 3;
+    array[4] = 3;
+    InitializingRegisterFile(array);
+    InitializingCache([null, null, null, null, null]);
+
+    console.log("Simulation initialized");
+    console.log("Register File:", RegisterFile);
+    console.log("Memory:", memory);
+
+    const frontendUpdate = {
+        instructionQueue: formatInstructions(InstructionQueue),
+        addData: adderReservationStation.map((entry, index) => ({
+            ...entry,
+            tag: "A" + (index)
+        })),
+        multData: multiplierReservationStation.map((entry, index) => ({
+            ...entry,
+            tag: "M" + (index)
+        })),
+        loadData: loadBuffer.map((entry, index) => ({
+            ...entry,
+            tag: "L" + (index)
+        })),
+        storeData: storeBuffer.map((entry, index) => ({
+            ...entry,
+            tag: "S" + (index)
+        })),
+        fpRegData: RegisterFile.slice(0, 32).map((entry, index) => ({
+            register: "F" + index,
+            Qi: entry.waiting,
+            data: entry.data
+        })),
+        intRegData: RegisterFile.slice(32).map((entry, index) => ({
+            register: "R" + index,
+            Qi: entry.waiting,
+            data: entry.data
+        }))
+    };
+
+    return {
+        isSimulationComplete: false,
+        frontendUpdate,
+        currentCycle: 0
+    };
+}
+
+async function advanceCycle(cycle) {
+    console.log(`Advancing Cycle`);
+
+    // Execute the three main stages
+    execute();
+    writeBack();
+    if (pc < Instructions.length) {
+        issueInstruction(cycle);
+    }
+
+    // Check if simulation is complete
+    const isSimulationComplete =
+        InstructionQueue.length === Instructions.length &&
+        adderReservationStation.every(station => station.busy === 0) &&
+        multiplierReservationStation.every(station => station.busy === 0) &&
+        loadBuffer.every(buffer => buffer.busy === 0) &&
+        storeBuffer.every(buffer => buffer.busy === 0);
+
+    // Prepare frontend update data
+    const frontendUpdate = {
+        instructionQueue: formatInstructions(InstructionQueue),
+        addData: adderReservationStation.map((entry, index) => ({
+            ...entry,
+            tag: "A" + (index)
+        })),
+        multData: multiplierReservationStation.map((entry, index) => ({
+            ...entry,
+            tag: "M" + (index)
+        })),
+        loadData: loadBuffer.map((entry, index) => ({
+            ...entry,
+            tag: "L" + (index)
+        })),
+        storeData: storeBuffer.map((entry, index) => ({
+            ...entry,
+            tag: "S" + (index)
+        })),
+        fpRegData: RegisterFile.slice(0, 32).map((entry, index) => ({
+            register: "F" + index,
+            Qi: entry.waiting,
+            data: entry.data
+        })),
+        intRegData: RegisterFile.slice(32).map((entry, index) => ({
+            register: "R" + index,
+            Qi: entry.waiting,
+            data: entry.data
+        }))
+    };
+
+    return {
+        isSimulationComplete,
+        frontendUpdate,
+    };
+}
+
 // Run the main method
 // main();
 
-export default main;
+export {
+    initializeSimulation,
+    advanceCycle
+};
 
 //----------------------------------------------------
 

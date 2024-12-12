@@ -6,6 +6,13 @@ export const columns = () => [
     {
         accessorKey: "busy",
         header: "Busy",
+        cell: ({ row }) => {
+			const busy = row.original.busy;
+
+			return (
+				<span>{busy > 1 ? 1 : busy}</span>
+			);
+		},
     },
     {
         accessorKey: "Vj",
