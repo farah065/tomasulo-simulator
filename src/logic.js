@@ -613,3 +613,9 @@ main();
 //1- implement branch
 //2- implement store and load conflict
 //3- add latencies for cache miss
+
+
+// Testing:
+// 1- test overloading a station
+// 3- test load and store conflict
+// 2- test branch
