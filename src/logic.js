@@ -611,6 +611,7 @@ function writeBack() {
             const { address, V } = buffer;
             memory[address] = V; // Store value to memory
             storeBuffer[i].busy = 0; // Mark the store buffer entry as free
+            removeInstructionFromStoreBuffer(i);
         }
     }
 
@@ -655,9 +656,10 @@ function main() {
     // );
     Instructions.push(
         // { operation: "L.D", destination: 6, immediate: 0 },      // L.D F6, 0
-        { operation: "ADD.D", destination: 5, source: 1, target: 3 }, // ADD.D F6, F8, F2
-        { operation: "ADD.D", destination: 4, source: 1, target: 3 }, // ADD.D F6, F8, F2
+        // { operation: "ADD.D", destination: 5, source: 1, target: 3 }, // ADD.D F6, F8, F2
+        // { operation: "ADD.D", destination: 4, source: 1, target: 3 }, // ADD.D F6, F8, F2
         { operation: "ADD.D", destination: 3, source: 1, target: 3 }, // ADD.D F6, F8, F2
+        { operation: "S.D", source: 6, immediate: 0 }          // S.D F6, 0
     );
     
     // Initialize Memory and Register File
