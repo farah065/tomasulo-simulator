@@ -292,7 +292,7 @@ function updateBranchReservationStation(tag, data) {
             branchStation[indexj].Qj = 0;
         }
 
-        const indexk = storeBuffer.findIndex(entry => entry.Qk === tag);
+        const indexk = branchStation.findIndex(entry => entry.Qk === tag);
         if (indexk !== -1) { // -1 means the item wasn't found
             branchStation[indexk].Vk = data;
             branchStation[indexk].Qk = 0;
@@ -781,7 +781,9 @@ function main() {
     Instructions.push(
         // { operation: "LW", destination: 6, immediate: 7 },      // L.D F6, 0
         // { operation: "S.D", source: 6, immediate: 0 },          // S.D F6, 0
-        { operation: "DADDI", destination: 0, source: 1, immediate: 11 }, // ADD.D F6, F8, F2
+        { operation: "DADDI", destination: 1, source: 1, immediate: 24 }, // ADD.D F6, F8, F2
+        { operation: "DADDI", destination: 2, source: 2, immediate: 7 }, // ADD.D F6, F8, F2
+        { operation: "BEQ", source: 2, target: 2, immediate: 7 }, // ADD.D F6, F8, F2
         // { operation: "S.D", source: 0, immediate: 1 }          // S.D F6, 0
     );
 
