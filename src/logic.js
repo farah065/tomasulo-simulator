@@ -5,6 +5,8 @@ let InstructionQueue = [];//instruction queue isnt used for execution only to st
 let cacheMissPenalty = 2;
 let cache = [];  //{address,data}
 let cacheMiss = false;
+let cacheBlockSize = 4;
+let cacheSize = 10;
 
 let RegisterFile = [];//{waiting,data}
 let memory = [];//{address,data}
@@ -36,7 +38,7 @@ let branchStation = [];
     const LOAD = ["L.S", "L.D", "LW", "LD"];
 
 //1)Initializing
-function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, branchBufferSize, _addLatency, _multLatency, _loadLatency, _storeLatency, _branchLatency){
+function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, branchBufferSize, _addLatency, _multLatency, _loadLatency, _storeLatency, _branchLatency, _cacheBlockSize){
     for (let i = 0; i < adderResSize; i++) {
         adderReservationStation.push({ busy: 0, operation: "", Vj: 0, Vk: 0, Qj: 0, Qk: 0, result: 0 });
     }
@@ -61,7 +63,8 @@ function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, branch
     multLatency = _multLatency;
     loadLatency = _loadLatency;
     storeLatency = _storeLatency;
-    branchLatency = _branchLatency
+    branchLatency = _branchLatency;
+    cacheBlockSize = _cacheBlockSize;
 }
 //---------------------------------------------------------------------------------------------------------
 
@@ -112,45 +115,60 @@ function fetchInstruction() {
 
 //3)Memory
 //TODO: Check size of memory
-function InitializingMemory(values) { //values is an array of values
+function InitializingMemory(size) { //values is an array of values
     // values.forEach((value, index) => {
     //     // console.log("idk: ", {value, index})
     //     memory.push({ waiting: index, data: value }); // Assign sequential numbers starting from 1
     // });
-    memory = values;
+    for( let i = 0; i<size; i++){
+        memory.push(i*10);
+    }
 }
 
-function InitializingCache(values) { //values is an array of values
-    // values.forEach((value, index) => {
-    //     // console.log("idk: ", {value, index})
-    //     cache.push({ address: index, data: 0 }); // Assign sequential numbers starting from 1
-    // });
-    cache = values;
+function InitializingCache(_cacheSize) { //values is an array of values
+    for(let i=0; i<_cacheSize; i++){
+        cache.push({ address: -1, data: null }); 
+    };
 }
 //---------------------------------------------------------------------------------------------------------
 
 
 //4)Cache
-function fetchToCache(memoryAddress) { // handling cache misses
+function fetchToCache(memoryAddress, isDoubleWord) { // handling cache misses- if fetching a doubleword, then check if block size <8, if it is then 2 fetches will be needed, if not then continue as normal.
     // const entry = memory.find(entry => entry.address === memoryAddress);
-    const entry = memory[memoryAddress];
-    // console.log("mementry: ", entry);
-    // const cacheEntry = cache.find(cacheEntry => cacheEntry.address === memoryAddress); // Find the cache entry with the same address
+    let iterations = cacheBlockSize/4
+    if((isDoubleWord)&&cacheBlockSize<8){
+        iterations+=1;
+    }
+    for(let i=0; i<iterations;i++){
+        const entry = memory[memoryAddress+i];
+        // console.log("mementry: ", entry);
+        const cacheEntryIndex = cache.findIndex(cacheEntry => cacheEntry.address === -1); // Find the cache entry with an empty slot
+        cache[cacheEntryIndex].data = entry;
+        cache[cacheEntryIndex].address = memoryAddress;
+    }
     // cacheEntry.data = entry.data;
-    cache[memoryAddress] = entry;
 }
 
-function fetchFromCache(memoryAddress) { //Fetching from cache 
-    let entry = cache[memoryAddress];
+function fetchFromCache(memoryAddress, operation) { //Fetching from cache 
+    let entry = cache.find(cacheEntry => cacheEntry.address === memoryAddress); // Find the cache entry with an empty slot
+    let isDoubleWord=false;
+    if(operation === "L.D" || operation === "LD"){
+        isDoubleWord=true;
+    }
+    // let entry = cache[memoryAddress];
     if (entry === null) {
-        fetchToCache(memoryAddress);
+        fetchToCache(memoryAddress, isDoubleWord);
         // console.log("memory to fetch to cache: ",memoryAddress);
-        // cacheMiss=true;
-        // entry = cache.find(entry => entry.data === memoryData);
-        entry = cache[memoryAddress];
+        cacheMiss=true;
+        let entryIndex = cache.findIndex(cacheEntry => cacheEntry.address === memoryAddress); // Find the cache entry with an empty slot
         console.log("ENTRY", entry);
     }
-    return entry;
+    if(isDoubleWord){
+        return (cache[entryIndex]+cache[entryIndex+1]);
+    }
+    
+    return cache[entryIndex].data;
 }
 //---------------------------------------------------------------------------------------------------------
 
@@ -559,7 +577,7 @@ function execute() {
         }
         if (buffer.busy === 1 && buffer.address !== -1) {//PROBLEM
             //     console.log("problem")
-            const memoryData = fetchFromCache(buffer.address); // Simulate memory access
+            const memoryData = fetchFromCache(buffer.address, operation); // Simulate memory access
             loadBuffer[i].result = memoryData; // Fetch the data
         }
     }
@@ -732,9 +750,9 @@ function main() {
     );
     
     // Initialize Memory and Register File
-    InitializingMemory([10, 20, 30, 40, 50]); // Memory values at sequential addresses
+    InitializingMemory(cacheSize); // Memory values at sequential addresses
     InitializingRegisterFile([0, 20, 1, 2, 3, 4, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,0]); // Initialize registers F0-F10
-    InitializingCache([null, null, null, null, null]);
+    InitializingCache(cacheSize);
     // InitializingCache([-1, -1, -1, -1, -1]);
 
     console.log("Starting simulation...");
@@ -964,8 +982,13 @@ export {
 //TODO:
 //1- implement load double word and store double word
 //2- add latencies for cache miss
+//3- cache block sizes
 
 
 // Testing:
 // 1- test overloading a station
 // 3- test load and store conflict
+
+
+
+// CHANGES: initialize cache and memory now both take an int array size input, cache is now an array of {address,data}
