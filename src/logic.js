@@ -420,8 +420,8 @@ function issueInstruction(cycle) {
                     id: id
                 };
                 issued = true;
+                writeToRegisterFile(destination,-1,"A"+index);
             }
-            writeToRegisterFile(destination,-1,"A"+index);
         } else if (MUL.includes(operation) || DIV.includes(operation)) {
             const index = multiplierReservationStation.findIndex(entry => entry.busy === 0);
             if (index !== -1) {
@@ -436,8 +436,8 @@ function issueInstruction(cycle) {
                     id: id
                 };
                 issued = true;
+                writeToRegisterFile(destination,-1,"M"+index);
             }
-            writeToRegisterFile(destination,-1,"M"+index);
         } else if (LOAD.includes(operation)) {
             const index = loadBuffer.findIndex(entry => entry.busy === 0);
             if (index !== -1) {
@@ -448,8 +448,8 @@ function issueInstruction(cycle) {
                     id: id
                 };
                 issued = true;
+                writeToRegisterFile(destination,-1,"L" + index);
             }
-            writeToRegisterFile(destination,-1,"L" + index);
         } else if (STORE.includes(operation)) {
             const index = storeBuffer.findIndex(entry => entry.busy === 0);
             if (index !== -1) {
@@ -487,6 +487,8 @@ function issueInstruction(cycle) {
         if (issued) {
             InstructionQueue.push({ operation, operand1, operand2, destination, issue: cycle }); // Add it to the queue
             pc++; // Increment the program counter to point to the next instruction
+        } else{
+            console.log("FAILED TO ISSUE INSTRUCTION")
         }
     }
 }
@@ -526,6 +528,15 @@ function execute() {
             const result = ALU(station.operation, station.Vj, station.Vk);
             branchStation[i].result = result; // Store result temporarily
         }
+
+        if (station.busy === 0 && station.operation !== "") { // Execution completed
+            let result = station.result;
+            if(result === 1){
+                pc = station.brnchDestination;
+            }
+            stall = false;
+            removeInstructionFromBranchReservationStation(i); // Free the reservation station
+        }
     }
 
     // Execute Load Buffer
@@ -546,12 +557,6 @@ function execute() {
         const buffer = storeBuffer[i];
         if (buffer.busy > 0 && buffer.Q === 0) {
             storeBuffer[i].busy -= 1;
-        }
-        if (buffer.busy === 1 && buffer.address !== -1) { // Data is ready for storing
-            console.log("enetered store exec");
-            const memoryAddress = buffer.address;
-            const value = buffer.V;
-            memory[memoryAddress] = value; // Store value in memory
         }
     }
 }
@@ -620,6 +625,7 @@ function writeBack(cycle) {
             const { address, V } = buffer;
             memory[address] = V; // Store value to memory
             storeBuffer[i].busy = 0; // Mark the store buffer entry as free
+            removeInstructionFromStoreBuffer(i);
         }
     }
 
@@ -671,9 +677,9 @@ function formatInstructions(instructions) {
 
 function main() {
     // Initialize Hardware
-    const adderResSize = 3;   // Number of adder reservation stations
+    const adderResSize = 2;   // Number of adder reservation stations
     const multResSize = 2;    // Number of multiplier reservation stations
-    const loadBufferSize = 3; // Size of the load buffer
+    const loadBufferSize = 2; // Size of the load buffer
     const storeBufferSize = 3; // Size of the store buffer
     const brnchBufferSize = 3; // Size of the store buffer
 
@@ -696,11 +702,11 @@ function main() {
     //     { operation: "S.D", source: 6, immediate: 0 }          // S.D F6, 0
     // );
     Instructions.push(
-        { operation: "L.D", destination: 6, immediate: 0 },      // L.D F6, 0
-        { operation: "MUL.D", destination: 0, source: 6, target: 4 }, // MUL.D F0, F6, F4
-        { operation: "SUB.D", destination: 8, source: 0, target: 6 }, // SUB.D F8, F0, F6
-        { operation: "BNE", destination: 1, source: 8, target: 1 }, // SUB.D F8, F0, F6
-        { operation: "S.D", source: 8, immediate: 0 }          // S.D F6, 0
+        // { operation: "L.D", destination: 6, immediate: 0 },      // L.D F6, 0
+        // { operation: "ADD.D", destination: 5, source: 1, target: 3 }, // ADD.D F6, F8, F2
+        // { operation: "ADD.D", destination: 4, source: 1, target: 3 }, // ADD.D F6, F8, F2
+        { operation: "ADD.D", destination: 3, source: 1, target: 3 }, // ADD.D F6, F8, F2
+        { operation: "S.D", source: 6, immediate: 0 }          // S.D F6, 0
     );
     
     // Initialize Memory and Register File
@@ -716,7 +722,7 @@ function main() {
 
     // Simulation Loop
     let cycle = 0;
-    const maxCycles = 17; // Prevent infinite loops
+    const maxCycles = 10; // Prevent infinite loops
     while (cycle < maxCycles) {
         console.log(`Cycle ${cycle}`);
 
