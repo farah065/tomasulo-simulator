@@ -159,7 +159,7 @@ function fetchFromCache(memoryAddress, operation) { //Fetching from cache
     console.log("FETCHING FROM CACHE: ", memoryAddress, operation);
     if(operation === "L.D" || operation === "LD"){
         isDoubleWord=true;
-    }
+    } 
     // let entry = cache[memoryAddress];
     if (entryIndex === -1) {
         fetchToCache(memoryAddress, isDoubleWord);
@@ -585,6 +585,9 @@ function execute() {
             //     console.log("problem")
             console.log("fetch Inputs: ",buffer.address, buffer.operation);
             const memoryData = fetchFromCache(buffer.address, buffer.operation); // Simulate memory access
+            if(cacheMiss){
+                loadBuffer[i].busy+=cacheMissPenalty;
+            }
             loadBuffer[i].result = memoryData; // Fetch the data
         }
     }
@@ -678,16 +681,16 @@ function writeBack(cycle) {
         const { address, V } = buffer;
         console.log("writing to memory: ",buffer);
         let cacheIndex = cache.findIndex(cacheEntry => cacheEntry.address === address);
-        if(buffer.operation === "S.D" || buffer.operation === "SD" && V>10){//10
+        if(buffer.operation === "S.D" || buffer.operation === "SD" && V>4294967295){//4294967295
             console.log("writing to memory: ",buffer);
 
-            memory[address]=10;
-            memory[address+1]=V-10;
+            memory[address]=4294967295;
+            memory[address+1]=V-4294967295;
             if(cacheIndex!==-1){
-                cache[cacheIndex]=10;
-                cache[cacheIndex+1]=V-10;
+                cache[cacheIndex]=4294967295;
+                cache[cacheIndex+1]=V-4294967295;
             }
-            
+
         } else {
             memory[address]=V;
             if(cacheIndex!==-1){
@@ -1007,15 +1010,8 @@ export {
 //----------------------------------------------------
 
 //TODO:
-//1- implement load double word and store double word
-//2- add latencies for cache miss
-//3- cache block sizes
-
-
-// Testing:
-// 1- test overloading a station
-// 3- test load and store conflict
-
+//report
+//submit
 
 
 // CHANGES: initialize cache and memory now both take an int array size input, cache is now an array of {address,data}
