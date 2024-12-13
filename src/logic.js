@@ -689,14 +689,14 @@ function writeBack(cycle) {
             memory[address] = 4294967295;
             memory[address + 1] = V - 4294967295;
             if (cacheIndex !== -1) {
-                cache[cacheIndex] = 4294967295;
-                cache[cacheIndex + 1] = V - 4294967295;
+                cache[cacheIndex].data = 4294967295;
+                cache[cacheIndex + 1].data = V - 4294967295;
             }
 
         } else {
             memory[address] = V;
             if (cacheIndex !== -1) {
-                cache[cacheIndex] = V;
+                cache[cacheIndex].data = V;
             }
         }
         InstructionQueue[buffer.id].writeResult = cycle;
