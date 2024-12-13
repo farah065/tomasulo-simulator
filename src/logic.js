@@ -520,6 +520,15 @@ function execute() {
             const result = ALU(station.operation, station.Vj, station.Vk);
             branchStation[i].result = result; // Store result temporarily
         }
+
+        if (station.busy === 0 && station.operation !== "") { // Execution completed
+            let result = station.result;
+            if(result === 1){
+                pc = station.brnchDestination;
+            }
+            stall = false;
+            removeInstructionFromBranchReservationStation(i); // Free the reservation station
+        }
     }
 
     // Execute Load Buffer
@@ -540,12 +549,6 @@ function execute() {
         const buffer = storeBuffer[i];
         if(buffer.busy>0 && buffer.Q === 0){
             storeBuffer[i].busy -= 1;
-        }
-        if (buffer.busy === 1 && buffer.address !== -1) { // Data is ready for storing
-            console.log("enetered store exec");
-            const memoryAddress = buffer.address;
-            const value = buffer.V;
-            memory[memoryAddress] = value; // Store value in memory
         }
     }
 }
