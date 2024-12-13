@@ -1,6 +1,6 @@
 import { Input } from "./ui/input";
 
-function Setup({ stationSizes, setStationSizes, instructionLatencies, setInstructionLatencies }) {
+function Setup({ stationSizes, setStationSizes, instructionLatencies, setInstructionLatencies, cache, setCache }) {
     return (
         <div className="flex flex-col gap-4">
             <h2 className="-mb-1 text-lg mt-4">
@@ -71,6 +71,7 @@ function Setup({ stationSizes, setStationSizes, instructionLatencies, setInstruc
                     />
                 </div>
             </div>
+
             <h2 className="-mb-1 text-lg mt-4">
                 Instruction Latencies
             </h2>
@@ -136,6 +137,36 @@ function Setup({ stationSizes, setStationSizes, instructionLatencies, setInstruc
                         defaultValue={instructionLatencies.branch}
                         className="w-full"
                         onChange={(e) => setInstructionLatencies({ ...instructionLatencies, branch: e.target.value })}
+                    />
+                </div>
+            </div>
+
+            <h2 className="-mb-1 text-lg mt-4">
+                Cache Details
+            </h2>
+            <div>
+                <h3 className="mb-1">
+                    Cache Size
+                </h3>
+                <div className="w-full">
+                    <Input
+                        type="number"
+                        defaultValue={cache.cacheSize}
+                        className="w-full"
+                        onChange={(e) => setCache({ ...cache, cacheSize: e.target.value })}
+                    />
+                </div>
+            </div>
+            <div>
+                <h3 className="mb-1">
+                    Block Size
+                </h3>
+                <div className="w-full">
+                    <Input
+                        type="number"
+                        defaultValue={cache.blockSize}
+                        className="w-full"
+                        onChange={(e) => setCache({ ...cache, blockSize: e.target.value })}
                     />
                 </div>
             </div>
