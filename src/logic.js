@@ -38,7 +38,7 @@ let branchStation = [];
     const LOAD = ["L.S", "L.D", "LW", "LD"];
 
 //1)Initializing
-function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, branchBufferSize, _addLatency, _multLatency, _loadLatency, _storeLatency, _branchLatency, _cacheBlockSize){
+function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, branchBufferSize, _addLatency, _multLatency, _loadLatency, _storeLatency, _branchLatency, _cacheBlockSize, _cacheSize){
     for (let i = 0; i < adderResSize; i++) {
         adderReservationStation.push({ busy: 0, operation: "", Vj: 0, Vk: 0, Qj: 0, Qk: 0, result: 0 });
     }
@@ -48,11 +48,11 @@ function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, branch
     }
 
     for (let i = 0; i < loadBufferSize; i++) {
-        loadBuffer.push({ busy:0 , address:-1, result: 0}); 
+        loadBuffer.push({ busy:0 , operation:"", address:-1, result: 0}); 
     }
 
     for (let i = 0; i < storeBufferSize; i++) {
-        storeBuffer.push({ busy:0 , address:-1 , V: 0, Q: 0});
+        storeBuffer.push({ busy:0 , operation:"", address:-1 , V: 0, Q: 0});
     }
 
     for (let i = 0; i < branchBufferSize; i++) {
@@ -65,6 +65,7 @@ function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, branch
     storeLatency = _storeLatency;
     branchLatency = _branchLatency;
     cacheBlockSize = _cacheBlockSize;
+    cacheSize = _cacheSize;
 }
 //---------------------------------------------------------------------------------------------------------
 
@@ -126,7 +127,9 @@ function InitializingMemory(size) { //values is an array of values
 }
 
 function InitializingCache(_cacheSize) { //values is an array of values
+    console.log("init cache ");
     for(let i=0; i<_cacheSize; i++){
+        console.log("init cache ",i);
         cache.push({ address: -1, data: null }); 
     };
 }
@@ -151,23 +154,24 @@ function fetchToCache(memoryAddress, isDoubleWord) { // handling cache misses- i
 }
 
 function fetchFromCache(memoryAddress, operation) { //Fetching from cache 
-    let entry = cache.find(cacheEntry => cacheEntry.address === memoryAddress); // Find the cache entry with an empty slot
+    let entryIndex = cache.findIndex(cacheEntry => cacheEntry.address === memoryAddress); // Find the cache entry with an empty slot
     let isDoubleWord=false;
+    console.log("FETCHING FROM CACHE: ", memoryAddress, operation);
     if(operation === "L.D" || operation === "LD"){
         isDoubleWord=true;
     }
     // let entry = cache[memoryAddress];
-    if (entry === null) {
+    if (entryIndex === -1) {
         fetchToCache(memoryAddress, isDoubleWord);
         // console.log("memory to fetch to cache: ",memoryAddress);
+        entryIndex = cache.findIndex(cacheEntry => cacheEntry.address === memoryAddress);
         cacheMiss=true;
-        let entryIndex = cache.findIndex(cacheEntry => cacheEntry.address === memoryAddress); // Find the cache entry with an empty slot
-        console.log("ENTRY", entry);
+        // console.log("ENTRY", entry);
     }
     if(isDoubleWord){
-        return (cache[entryIndex]+cache[entryIndex+1]);
+        return (cache[entryIndex].data + cache[entryIndex+1].data);
     }
-    
+
     return cache[entryIndex].data;
 }
 //---------------------------------------------------------------------------------------------------------
@@ -329,7 +333,7 @@ function addInstructionToLoadBuffer(instruction) {
 
 function removeInstructionFromLoadBuffer(index) {
     // loadBuffer[index].busy= 0;
-    loadBuffer[index] = { busy:0 , address:-1, result: 0};
+    loadBuffer[index] = { busy:0 , operation:"", address:-1, result: 0};
 }
 //---------------------------------------------------------------------------------------------------------
 
@@ -361,7 +365,7 @@ function addInstructionToStoreBuffer(instruction) {
 
 function removeInstructionFromStoreBuffer(index) {
     // storeBuffer[index].busy= 0;
-    storeBuffer[index] = { busy: 0, address: -1, V: 0, Q: 0 };
+    storeBuffer[index] = { busy: 0, operation:"", address: -1, V: 0, Q: 0 };
 }
 //---------------------------------------------------------------------------------------------------------
 
@@ -472,7 +476,8 @@ function issueInstruction(cycle) {
             const index = loadBuffer.findIndex(entry => entry.busy === 0);
             if (index !== -1) {
                 loadBuffer[index] = { 
-                    busy: loadLatency+1, 
+                    busy: loadLatency+1,
+                    operation: operation, 
                     address: operand1, 
                     result: 0,
                     id: id
@@ -485,6 +490,7 @@ function issueInstruction(cycle) {
             if (index !== -1) {
                 storeBuffer[index] = { 
                     busy: storeLatency+1, 
+                    operation: operation, 
                     address: destination, 
                     V: vj, 
                     Q: qj,
@@ -577,7 +583,8 @@ function execute() {
         }
         if (buffer.busy === 1 && buffer.address !== -1) {//PROBLEM
             //     console.log("problem")
-            const memoryData = fetchFromCache(buffer.address, operation); // Simulate memory access
+            console.log("fetch Inputs: ",buffer.address, buffer.operation);
+            const memoryData = fetchFromCache(buffer.address, buffer.operation); // Simulate memory access
             loadBuffer[i].result = memoryData; // Fetch the data
         }
     }
@@ -663,15 +670,33 @@ function writeBack(cycle) {
 
     console.log("writeback array: ", writeBackArray);
     console.log("Store writeback array: ", storeWriteBackArray);
+
     if(storeWriteBackArray.length !== 0){
         let tempIndex = storeWriteBackArray.reduce((minIndex, current, index, array) => current.id < array[minIndex].id ? index : minIndex, 0);
         let buffer = storeWriteBackArray[tempIndex];
         storeWriteBackArray.splice(tempIndex, 1);
         const { address, V } = buffer;
         console.log("writing to memory: ",buffer);
-        memory[address] = V; // Store value to memory
+        let cacheIndex = cache.findIndex(cacheEntry => cacheEntry.address === address);
+        if(buffer.operation === "S.D" || buffer.operation === "SD" && V>10){//10
+            console.log("writing to memory: ",buffer);
+
+            memory[address]=10;
+            memory[address+1]=V-10;
+            if(cacheIndex!==-1){
+                cache[cacheIndex]=10;
+                cache[cacheIndex+1]=V-10;
+            }
+            
+        } else {
+            memory[address]=V;
+            if(cacheIndex!==-1){
+                cache[cacheIndex]=V;
+            }
+        }
         InstructionQueue[buffer.id].writeResult = cycle;
     }
+
     if (writeBackArray.length !== 0) {
         // let temp be the element in writeBackArray with the smallest id
         let tempIndex = writeBackArray.reduce((minIndex, current, index, array) => current.id < array[minIndex].id ? index : minIndex, 0);
@@ -729,8 +754,10 @@ function main() {
     const loadLatency = 2;    // Latency for load
     const storeLatency = 2;   // Latency for store
     const branchLatency = 2;   // Latency for store
+    const cacheBlockSize = 4;   // Latency for store
+    const cachesize = 12;   // Latency for store
 
-    init(adderResSize, multResSize, loadBufferSize, storeBufferSize, brnchBufferSize, addLatency, multLatency, loadLatency, storeLatency, branchLatency);
+    init(adderResSize, multResSize, loadBufferSize, storeBufferSize, brnchBufferSize, addLatency, multLatency, loadLatency, storeLatency, branchLatency, cacheBlockSize, cachesize);
 
     // Load Instructions
     // Instructions.push(
@@ -743,10 +770,10 @@ function main() {
     //     { operation: "S.D", source: 6, immediate: 0 }          // S.D F6, 0
     // );
     Instructions.push(
-        // { operation: "L.D", destination: 6, immediate: 0 },      // L.D F6, 0
-        { operation: "ADD.D", destination: 0, source: 1, target: 3 }, // ADD.D F6, F8, F2
-        { operation: "S.D", source: 0, immediate: 0 },          // S.D F6, 0
-        { operation: "S.D", source: 0, immediate: 1 }          // S.D F6, 0
+        { operation: "LW", destination: 6, immediate: 7},      // L.D F6, 0
+        { operation: "S.D", source: 6, immediate: 0 },          // S.D F6, 0
+        // { operation: "ADD.D", destination: 0, source: 1, target: 3 }, // ADD.D F6, F8, F2
+        // { operation: "S.D", source: 0, immediate: 1 }          // S.D F6, 0
     );
     
     // Initialize Memory and Register File
@@ -970,7 +997,7 @@ async function advanceCycle(cycle) {
 }
 
 // Run the main method
-// main();
+main();
 
 export {
     initializeSimulation,
