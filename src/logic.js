@@ -74,7 +74,7 @@ function fetchInstruction() {
     if (pc < Instructions.length) {
 
         const fetchedInstruction = Instructions[pc]; // Fetch instruction at current pc
-
+        console.log("fetched instruction: ",fetchedInstruction);
         //Set the values of currInstruction depending on operation
         const destSrcTgt = ["ADD.S", "ADD.D", "SUB.S", "SUB.D", "MUL.S", "MUL.D", "DIV.S", "DIV.D"];
         const destSrcImm = ["DADDI", "DSUBI"];
@@ -127,9 +127,9 @@ function InitializingMemory(size) { //values is an array of values
 }
 
 function InitializingCache(_cacheSize) { //values is an array of values
-    console.log("init cache ");
+    // console.log("init cache ");
     for (let i = 0; i < _cacheSize; i++) {
-        console.log("init cache ", i);
+        // console.log("init cache ", i);
         cache.push({ address: -1, data: null });
     };
 }
@@ -432,16 +432,20 @@ function issueInstruction(cycle) {
     if (stall !== true) {
         console.log("ISSUING: ", { operation, operand1, operand2, destination })
         // console.log("operation: ",{ operation, operand1, operand2, destination });
-        const qj = fetchFromRegisterFile(operand1).waiting;
-        const qk = fetchFromRegisterFile(operand2).waiting;
-        const vj = fetchFromRegisterFile(operand1).data;
-        const vk = fetchFromRegisterFile(operand2).data;
+        let qj = fetchFromRegisterFile(operand1).waiting;
+        let qk = fetchFromRegisterFile(operand2).waiting;
+        let vj = fetchFromRegisterFile(operand1).data;
+        let vk = fetchFromRegisterFile(operand2).data;
         console.log("operand1", operand1);
         console.log("operand2", operand2);
         const { waiting, value } = fetchFromRegisterFile(operand2);
         console.log("vj,qj,vk,qk: ", vj, qj, vk, qk);
         // Check the operation type and find the appropriate station
         if (ADD.includes(operation) || SUB.includes(operation)) {
+            if(operation==="DADDI" || operation==="DSUBI"){
+                qk=0;
+                vk=operand2;
+            }
             const index = adderReservationStation.findIndex(entry => entry.busy === 0);
             if (index !== -1) {
                 adderReservationStation[index] = {
@@ -765,21 +769,21 @@ function main() {
     init(adderResSize, multResSize, loadBufferSize, storeBufferSize, brnchBufferSize, addLatency, multLatency, loadLatency, storeLatency, branchLatency, cacheBlockSize, cachesize);
 
     // Load Instructions
-    Instructions.push(
-        { operation: "L.D", destination: 6, immediate: 0 },      // L.D F6, 0
-        { operation: "L.D", destination: 2, immediate: 4 },      // L.D F2, 4
-        { operation: "MUL.D", destination: 0, source: 2, target: 4 }, // MUL.D F0, F2, F4
-        { operation: "SUB.D", destination: 8, source: 2, target: 6 }, // SUB.D F8, F2, F6
-        { operation: "DIV.D", destination: 10, source: 0, target: 6 }, // DIV.D F10, F0, F6
-        { operation: "ADD.D", destination: 6, source: 8, target: 2 }, // ADD.D F6, F8, F2
-        { operation: "S.D", source: 6, immediate: 0 }          // S.D F6, 0
-    );
     // Instructions.push(
-    //     { operation: "LW", destination: 6, immediate: 7 },      // L.D F6, 0
-    //     { operation: "S.D", source: 6, immediate: 0 },          // S.D F6, 0
-    //     // { operation: "ADD.D", destination: 0, source: 1, target: 3 }, // ADD.D F6, F8, F2
-    //     // { operation: "S.D", source: 0, immediate: 1 }          // S.D F6, 0
+    //     { operation: "L.D", destination: 6, immediate: 0 },      // L.D F6, 0
+    //     { operation: "L.D", destination: 2, immediate: 4 },      // L.D F2, 4
+    //     { operation: "MUL.D", destination: 0, source: 2, target: 4 }, // MUL.D F0, F2, F4
+    //     { operation: "SUB.D", destination: 8, source: 2, target: 6 }, // SUB.D F8, F2, F6
+    //     { operation: "DIV.D", destination: 10, source: 0, target: 6 }, // DIV.D F10, F0, F6
+    //     { operation: "ADD.D", destination: 6, source: 8, target: 2 }, // ADD.D F6, F8, F2
+    //     { operation: "S.D", source: 6, immediate: 0 }          // S.D F6, 0
     // );
+    Instructions.push(
+        // { operation: "LW", destination: 6, immediate: 7 },      // L.D F6, 0
+        // { operation: "S.D", source: 6, immediate: 0 },          // S.D F6, 0
+        { operation: "DADDI", destination: 0, source: 1, immediate: 11 }, // ADD.D F6, F8, F2
+        // { operation: "S.D", source: 0, immediate: 1 }          // S.D F6, 0
+    );
 
     // Initialize Memory and Register File
     InitializingMemory(cacheSize); // Memory values at sequential addresses
@@ -794,7 +798,7 @@ function main() {
 
     // Simulation Loop
     let cycle = 0;
-    const maxCycles = 25; // Prevent infinite loops
+    const maxCycles = 6; // Prevent infinite loops
     while (cycle < maxCycles) {
         console.log(`Cycle ${cycle}`);
         console.log("CACHE!!!!!!!!", cache[2]);
@@ -1015,7 +1019,7 @@ async function advanceCycle(cycle) {
 }
 
 // Run the main method
-// main();
+main();
 
 export {
     initializeSimulation,

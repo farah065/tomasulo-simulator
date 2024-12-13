@@ -23,9 +23,15 @@ function App() {
             "immediate": 0
         },
         {
+            "operation": "ADD.D",
+            "destination": 7,
+            "source": 1,
+            "target": 3
+        },
+        {
             "operation": "L.D",
             "destination": 2,
-            "immediate": 4
+            "immediate": 20
         },
         {
             "operation": "MUL.D",
@@ -46,17 +52,54 @@ function App() {
             "target": 6
         },
         {
-            "operation": "ADD.D",
-            "destination": 6,
-            "source": 8,
-            "target": 2
-        },
-        {
             "operation": "S.D",
-            "source": 6,
-            "immediate": 4
+            "source": 10,
+            "immediate": 0
         },
     ]);
+    //TEST CASES
+    // 1
+    // {
+    //     "operation": "L.D",
+    //     "destination": 6,
+    //     "immediate": 0
+    // },
+    // {
+    //     "operation": "ADD.D",
+    //     "destination": 7,
+    //     "source": 1,
+    //     "target": 3
+    // },
+    // {
+    //     "operation": "L.D",
+    //     "destination": 2,
+    //     "immediate": 20
+    // },
+    // {
+    //     "operation": "MUL.D",
+    //     "destination": 0,
+    //     "source": 2,
+    //     "target": 4
+    // },
+    // {
+    //     "operation": "SUB.D",
+    //     "destination": 8,
+    //     "source": 2,
+    //     "target": 6
+    // },
+    // {
+    //     "operation": "DIV.D",
+    //     "destination": 10,
+    //     "source": 0,
+    //     "target": 6
+    // },
+    // {
+    //     "operation": "S.D",
+    //     "source": 10,
+    //     "immediate": 0
+    // },
+
+    //2 
     const [instructionQueue, setInstructionQueue] = useState([]);
     const [stationSizes, setStationSizes] = useState({
         fpAdders: 3,
