@@ -9,6 +9,7 @@ let cacheMiss = false;
 let RegisterFile = [];//{waiting,data}
 let memory = [];//{address,data}
 let writeBackArray = []; //has all instructions ready to be written
+let storeWriteBackArray = []; //has all instructions ready to be written
 let pc = 0;
 
 let addLatency = 0;
@@ -188,17 +189,19 @@ function writeToRegisterFile(registerNumber, registerData, registerWating) {
 //6)Adder Reservation Station 
 //{busy, operation , Vj, Vk, Qj, Qk}
 function updateAdderReservationStation(tag, data) {
-    const indexj = adderReservationStation.findIndex(entry => entry.Qj === tag);
-    if (indexj !== -1) { // -1 means the item wasn't found
-        adderReservationStation[indexj].Vj = data;
-        adderReservationStation[indexj].Qj = 0;
-    }
-
-    const indexk = adderReservationStation.findIndex(entry => entry.Qk === tag);
-    if (indexk !== -1) { // -1 means the item wasn't found
-        adderReservationStation[indexk].Vk = data;
-        adderReservationStation[indexk].Qk = 0;
-    }
+    adderReservationStation.forEach(() => {
+        const indexj = adderReservationStation.findIndex(entry => entry.Qj === tag);
+        if (indexj !== -1) { // -1 means the item wasn't found
+            adderReservationStation[indexj].Vj = data;
+            adderReservationStation[indexj].Qj = 0;
+        }
+    
+        const indexk = adderReservationStation.findIndex(entry => entry.Qk === tag);
+        if (indexk !== -1) { // -1 means the item wasn't found
+            adderReservationStation[indexk].Vk = data;
+            adderReservationStation[indexk].Qk = 0;
+        }
+    })
 }
 
 function addInstructionToAdderReservationStation(instruction) {
@@ -222,17 +225,20 @@ function removeInstructionFromAdderReservationStation(index) {
 //7)Multiplier Reservation Station
 //{busy, operation , Vj, Vk, Qj, Qk}
 function updateMultiplierReservationStation(tag, data) {
-    const indexj = multiplierReservationStation.findIndex(entry => entry.Qj === tag);
-    if (indexj !== -1) { // -1 means the item wasn't found
-        multiplierReservationStation[indexj].Vj = data;
-        multiplierReservationStation[indexj].Qj = 0;
-    }
+    multiplierReservationStation.forEach(() => {
+        const indexj = multiplierReservationStation.findIndex(entry => entry.Qj === tag);
+        if (indexj !== -1) { // -1 means the item wasn't found
+            multiplierReservationStation[indexj].Vj = data;
+            multiplierReservationStation[indexj].Qj = 0;
+        }
+    
+        const indexk = multiplierReservationStation.findIndex(entry => entry.Qk === tag);
+        if (indexk !== -1) { // -1 means the item wasn't found
+            multiplierReservationStation[indexk].Vk = data;
+            multiplierReservationStation[indexk].Qk = 0;
+        }
 
-    const indexk = multiplierReservationStation.findIndex(entry => entry.Qk === tag);
-    if (indexk !== -1) { // -1 means the item wasn't found
-        multiplierReservationStation[indexk].Vk = data;
-        multiplierReservationStation[indexk].Qk = 0;
-    }
+    })
 }
 
 function addInstructionToMultiplierReservationStation(instruction) {
@@ -256,17 +262,19 @@ function removeInstructionFromMultiplierReservationStation(index) {
 //Branch Station
 //{ busy:0 , operation:"", Vj: 0, Vk: 0, Qj: 0, Qk: 0, result: 0}
 function updateBranchReservationStation(tag, data){
-    const indexj = branchStation.findIndex(entry => entry.Qj === tag);
-    if (indexj !== -1) { // -1 means the item wasn't found
-        branchStation[indexj].Vj = data;
-        branchStation[indexj].Qj = 0;
-    }
-
-    const indexk = storeBuffer.findIndex(entry => entry.Qk === tag);
-    if (indexk !== -1) { // -1 means the item wasn't found
-        branchStation[indexk].Vk = data;
-        branchStation[indexk].Qk = 0;
-    }
+    branchStation.forEach(() => {
+        const indexj = branchStation.findIndex(entry => entry.Qj === tag);
+        if (indexj !== -1) { // -1 means the item wasn't found
+            branchStation[indexj].Vj = data;
+            branchStation[indexj].Qj = 0;
+        }
+    
+        const indexk = storeBuffer.findIndex(entry => entry.Qk === tag);
+        if (indexk !== -1) { // -1 means the item wasn't found
+            branchStation[indexk].Vk = data;
+            branchStation[indexk].Qk = 0;
+        }
+    })
 }
 
 function addInstructionToBranchReservationStation(instruction){
@@ -311,13 +319,15 @@ function removeInstructionFromLoadBuffer(index) {
 //9)Store Buffer
 //{busy,Address, V, Q}
 function updateStoreBuffer(tag, data) {
-    const index = storeBuffer.findIndex(entry => entry.Q === tag);
-    if (index !== -1) { // -1 means the item wasn't found
-        storeBuffer[index].V = data;
-        storeBuffer[index].Q = 0;
-    } else {
-        return -1;
-    }
+    storeBuffer.forEach(() => {
+        const index = storeBuffer.findIndex(entry => entry.Q === tag);
+        if (index !== -1) { // -1 means the item wasn't found
+            storeBuffer[index].V = data;
+            storeBuffer[index].Q = 0;
+        } else {
+            return -1;
+        }
+    })
 }
 
 function addInstructionToStoreBuffer(instruction) {
@@ -378,8 +388,10 @@ function publishToBus(tag, data) {
     console.log("published", tag, data);
 
     const registerNumber = RegisterFile.findIndex(entry => entry.waiting === tag);
-
-    writeToRegisterFile(registerNumber, data, 0);
+    if(registerNumber!== -1){
+        // console.log("writing back: ",registerNumber,tag,data);
+        writeToRegisterFile(registerNumber, data, 0);
+    }
     updateAdderReservationStation(tag, data);
     updateMultiplierReservationStation(tag, data);
     updateStoreBuffer(tag, data);
@@ -622,16 +634,26 @@ function writeBack(cycle) {
     for (let i = 0; i < storeBuffer.length; i++) {
         const buffer = storeBuffer[i];
         if (buffer.busy === 0 && buffer.address !== -1) { // Store operation ready for memory write
-            const { address, V } = buffer;
-            memory[address] = V; // Store value to memory
-            storeBuffer[i].busy = 0; // Mark the store buffer entry as free
-            InstructionQueue[storeBuffer[i].id].writeResult = cycle;
+            storeWriteBackArray.push(buffer);
+            // memory[address] = V; // Store value to memory
+            // storeBuffer[i].busy = 0; // Mark the store buffer entry as free
+            // InstructionQueue[buffer.id].writeResult = cycle;
             removeInstructionFromStoreBuffer(i);
         }
     }
 
 
     console.log("writeback array: ", writeBackArray);
+    console.log("Store writeback array: ", storeWriteBackArray);
+    if(storeWriteBackArray.length !== 0){
+        let tempIndex = storeWriteBackArray.reduce((minIndex, current, index, array) => current.id < array[minIndex].id ? index : minIndex, 0);
+        let buffer = storeWriteBackArray[tempIndex];
+        storeWriteBackArray.splice(tempIndex, 1);
+        const { address, V } = buffer;
+        console.log("writing to memory: ",buffer);
+        memory[address] = V; // Store value to memory
+        InstructionQueue[buffer.id].writeResult = cycle;
+    }
     if (writeBackArray.length !== 0) {
         // let temp be the element in writeBackArray with the smallest id
         let tempIndex = writeBackArray.reduce((minIndex, current, index, array) => current.id < array[minIndex].id ? index : minIndex, 0);
@@ -704,15 +726,14 @@ function main() {
     // );
     Instructions.push(
         // { operation: "L.D", destination: 6, immediate: 0 },      // L.D F6, 0
-        // { operation: "ADD.D", destination: 5, source: 1, target: 3 }, // ADD.D F6, F8, F2
-        // { operation: "ADD.D", destination: 4, source: 1, target: 3 }, // ADD.D F6, F8, F2
-        { operation: "ADD.D", destination: 3, source: 1, target: 3 }, // ADD.D F6, F8, F2
-        { operation: "S.D", source: 6, immediate: 0 }          // S.D F6, 0
+        { operation: "ADD.D", destination: 0, source: 1, target: 3 }, // ADD.D F6, F8, F2
+        { operation: "S.D", source: 0, immediate: 0 },          // S.D F6, 0
+        { operation: "S.D", source: 0, immediate: 1 }          // S.D F6, 0
     );
     
     // Initialize Memory and Register File
     InitializingMemory([10, 20, 30, 40, 50]); // Memory values at sequential addresses
-    InitializingRegisterFile([0, 20, 0, 3, 3, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,0]); // Initialize registers F0-F10
+    InitializingRegisterFile([0, 20, 1, 2, 3, 4, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,0]); // Initialize registers F0-F10
     InitializingCache([null, null, null, null, null]);
     // InitializingCache([-1, -1, -1, -1, -1]);
 
@@ -784,8 +805,10 @@ async function initializeSimulation(stationSizes, instructionLatencies, instruct
     // Initialize Memory and Register File
     InitializingMemory([10, 20, 30, 40, 50]); // Memory values at sequential addresses
     const array = Array.from({ length: 64 }, () => 0);
-    array[3] = 3;
-    array[4] = 3;
+    array[3] = 1;
+    array[4] = 2;
+    array[5] = 3;
+    array[6] = 4;
     InitializingRegisterFile(array);
     InitializingCache([null, null, null, null, null]);
 
@@ -939,9 +962,8 @@ export {
 //----------------------------------------------------
 
 //TODO:
-//2- implement store and load conflict
-//3- add latencies for cache miss
- 
+//1- implement load double word and store double word
+//2- add latencies for cache miss
 
 
 // Testing:
