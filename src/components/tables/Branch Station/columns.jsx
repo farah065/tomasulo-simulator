@@ -15,22 +15,23 @@ export const columns = () => [
 		},
     },
     {
-        accessorKey: "address",
-        header: "A",
-        cell: ({ row }) => {
-			const address = row.original.address;
-
-			return (
-				<span>{address == -1 ? 0 : address}</span>
-			);
-		},
+        accessorKey: "Vj",
+        header: "Vj",
     },
     {
-        accessorKey: "V",
-        header: "V",
+        accessorKey: "Vk",
+        header: "Vk",
     },
     {
-        accessorKey: "Q",
-        header: "Q",
+        accessorKey: "Qj",
+        header: "Qj",
     },
+    {
+        accessorKey: "Qk",
+        header: "Qk",
+    },
+    {
+        accessorKey: "brnchDestination",
+        header: "Dest.",
+    }
 ];

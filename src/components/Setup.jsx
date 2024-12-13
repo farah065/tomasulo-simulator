@@ -58,6 +58,19 @@ function Setup({ stationSizes, setStationSizes, instructionLatencies, setInstruc
                     />
                 </div>
             </div>
+            <div>
+                <h3 className="mb-1">
+                    Branch Stations
+                </h3>
+                <div className="w-full">
+                    <Input
+                        type="number"
+                        defaultValue={stationSizes.branchStations}
+                        className="w-full"
+                        onChange={(e) => setStationSizes({ ...stationSizes, branchStations: e.target.value })}
+                    />
+                </div>
+            </div>
             <h2 className="-mb-1 text-lg mt-4">
                 Instruction Latencies
             </h2>
@@ -110,6 +123,19 @@ function Setup({ stationSizes, setStationSizes, instructionLatencies, setInstruc
                         defaultValue={instructionLatencies.store}
                         className="w-full"
                         onChange={(e) => setInstructionLatencies({ ...instructionLatencies, store: e.target.value })}
+                    />
+                </div>
+            </div>
+            <div>
+                <h3 className="mb-1">
+                    Branches
+                </h3>
+                <div className="w-full">
+                    <Input
+                        type="number"
+                        defaultValue={instructionLatencies.branch}
+                        className="w-full"
+                        onChange={(e) => setInstructionLatencies({ ...instructionLatencies, branch: e.target.value })}
                     />
                 </div>
             </div>

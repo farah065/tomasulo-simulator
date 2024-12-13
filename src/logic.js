@@ -51,7 +51,7 @@ function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, branch
     for (let i = 0; i < storeBufferSize; i++) {
         storeBuffer.push({ busy:0 , address:-1 , V: 0, Q: 0});
     }
-    
+
     for (let i = 0; i < branchBufferSize; i++) {
         branchStation.push({ busy:0 , operation:"", Vj: 0, Vk: 0, Qj: 0, Qk: 0, brnchDestination: 0, result: 0});
     }
@@ -59,7 +59,6 @@ function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, branch
     addLatency = _addLatency;
     multLatency = _multLatency;
     loadLatency = _loadLatency;
-    console.log("HELLO?????????????", _storeLatency)
     storeLatency = _storeLatency;
     branchLatency = _branchLatency
 }
@@ -766,11 +765,11 @@ async function initializeSimulation(stationSizes, instructionLatencies, instruct
     console.log("STATION SIZES: ", stationSizes)
     console.log("INSTRUCTION LATENCIES: ", instructionLatencies)
     // Initialize Hardware
-    const { fpAdders, fpMultipliers, loadBuffers, storeBuffers, branchStation } = stationSizes;
+    const { fpAdders, fpMultipliers, loadBuffers, storeBuffers, branchStations } = stationSizes;
     const { fpAdd, fpMult, load, store, branch } = instructionLatencies;
 
     // Reset all simulation state
-    init(fpAdders, fpMultipliers, loadBuffers, storeBuffers, branchStation, fpAdd, fpMult, load, store, branch);
+    init(fpAdders, fpMultipliers, loadBuffers, storeBuffers, branchStations, fpAdd, fpMult, load, store, branch);
 
     // Load Instructions
     Instructions = instructions;
@@ -804,6 +803,10 @@ async function initializeSimulation(stationSizes, instructionLatencies, instruct
         storeData: storeBuffer.map((entry, index) => ({
             ...entry,
             tag: "S" + (index)
+        })),
+        branchData: branchStation.map((entry, index) => ({
+            ...entry,
+            tag: "B" + (index)
         })),
         fpRegData: RegisterFile.slice(0, 32).map((entry, index) => ({
             register: "F" + index,
@@ -895,6 +898,10 @@ async function advanceCycle(cycle) {
         storeData: storeBuffer.map((entry, index) => ({
             ...entry,
             tag: "S" + (index)
+        })),
+        branchData: branchStation.map((entry, index) => ({
+            ...entry,
+            tag: "B" + (index)
         })),
         fpRegData: RegisterFile.slice(0, 32).map((entry, index) => ({
             register: "F" + index,

@@ -10,7 +10,7 @@ export const columns = () => [
 			const busy = row.original.busy;
 
 			return (
-				<span>{busy > 1 ? 1 : busy}</span>
+				<span>{busy >= 1 ? 1 : "0"}</span>
 			);
 		},
     },

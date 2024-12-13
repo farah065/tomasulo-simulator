@@ -10,6 +10,7 @@ import AdditionStation from "./components/tables/Addition Station/AdditionStatio
 import MultiplicationStation from "./components/tables/Multiplication Station/MultiplicationStation";
 import LoadBuffer from "./components/tables/Load Buffer/LoadBuffer";
 import StoreBuffer from "./components/tables/Store Buffer/StoreBuffer";
+import BranchStation from "./components/tables/Branch Station/BranchStation";
 import { initializeSimulation, advanceCycle } from "./logic";
 
 function App() {
@@ -61,7 +62,7 @@ function App() {
         fpMultipliers: 2,
         loadBuffers: 2,
         storeBuffers: 2,
-        branchStation: 1,
+        branchStations: 1,
     });
     const [instructionLatencies, setInstructionLatencies] = useState({
         fpAdd: 4,
@@ -105,35 +106,43 @@ function App() {
     }
 
     const [addData, setAddData] = useState(Array.from({ length: stationSizes.fpAdders }, (_, i) => ({
-        tag: `A${i + 1}`,
+        tag: `A${i}`,
         busy: 0,
-        vj: "",
-        vk: "",
-        qj: "",
-        qk: "",
-        a: "",
+        Vj: "",
+        Vk: "",
+        Qj: "",
+        Qk: "",
     })));
 
     const [multData, setMultData] = useState(Array.from({ length: stationSizes.fpMultipliers }, (_, i) => ({
-        tag: `M${i + 1}`,
+        tag: `M${i}`,
         busy: 0,
-        vj: "",
-        vk: "",
-        qj: "",
-        qk: "",
-        a: "",
+        Vj: "",
+        Vk: "",
+        Qj: "",
+        Qk: "",
     })));
 
     const [loadData, setLoadData] = useState(Array.from({ length: stationSizes.loadBuffers }, (_, i) => ({
-        tag: `L${i + 1}`,
+        tag: `L${i}`,
         busy: 0,
-        a: "",
+        address: "",
     })));
 
     const [storeData, setStoreData] = useState(Array.from({ length: stationSizes.storeBuffers }, (_, i) => ({
-        tag: `S${i + 1}`,
+        tag: `S${i}`,
         busy: 0,
-        a: "",
+        address: "",
+    })));
+
+    const [branchData, setBranchData] = useState(Array.from({ length: stationSizes.branchStation }, (_, i) => ({
+        tag: `B${i}`,
+        busy: 0,
+        Vj: "",
+        Vk: "",
+        Qj: "",
+        Qk: "",
+        address: "",
     })));
 
     const intRegs = Array.from({ length: 32 }, (_, i) => `R${i}`);
@@ -164,6 +173,7 @@ function App() {
         setStoreData(result.frontendUpdate.storeData);
         setFpRegData(result.frontendUpdate.fpRegData);
         setIntRegData(result.frontendUpdate.intRegData);
+        setBranchData(result.frontendUpdate.branchData);
         setCycle(result.currentCycle);
         setPage(1);
     }
@@ -177,6 +187,7 @@ function App() {
         setStoreData(result.frontendUpdate.storeData);
         setFpRegData(result.frontendUpdate.fpRegData);
         setIntRegData(result.frontendUpdate.intRegData);
+        setBranchData(result.frontendUpdate.branchData);
         setCycle(cycle + 1);
     }
 
@@ -238,6 +249,7 @@ function App() {
                             <MultiplicationStation data={multData} />
                             <LoadBuffer data={loadData} />
                             <StoreBuffer data={storeData} />
+                            <BranchStation data={branchData} />
                         </div>
                         <div className="col-span-2">
                             <h2 className="text-xl mb-3">
