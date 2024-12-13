@@ -168,7 +168,9 @@ function App() {
         const intStations = Object.fromEntries(Object.entries(stationSizes).map(([key, value]) => [key, parseInt(value)]));
         // make sure all instruction latencies are ints
         const intLatencies = Object.fromEntries(Object.entries(instructionLatencies).map(([key, value]) => [key, parseInt(value)]));
-        const result = await initializeSimulation(intStations, intLatencies, instructions, cache);
+        let modifiedCache = { ...cache };
+        modifiedCache.cacheSize = modifiedCache.cacheSize / 4;
+        const result = await initializeSimulation(intStations, intLatencies, instructions, modifiedCache);
         console.log("RESULT: ", result);
         setInstructionQueue(result.frontendUpdate.instructionQueue);
         setAddData(result.frontendUpdate.addData);
@@ -178,6 +180,7 @@ function App() {
         setFpRegData(result.frontendUpdate.fpRegData);
         setIntRegData(result.frontendUpdate.intRegData);
         setBranchData(result.frontendUpdate.branchData);
+        setCacheData(result.frontendUpdate.cacheData);
         setCycle(result.currentCycle);
         setPage(1);
     }
@@ -192,6 +195,7 @@ function App() {
         setFpRegData(result.frontendUpdate.fpRegData);
         setIntRegData(result.frontendUpdate.intRegData);
         setBranchData(result.frontendUpdate.branchData);
+        setCacheData(result.frontendUpdate.cacheData);
         setCycle(cycle + 1);
     }
 

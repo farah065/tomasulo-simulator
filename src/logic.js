@@ -38,7 +38,7 @@ let branchStation = [];
     const LOAD = ["L.S", "L.D", "LW", "LD"];
 
 //1)Initializing
-function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, branchBufferSize, _addLatency, _multLatency, _loadLatency, _storeLatency, _branchLatency, _cacheBlockSize){
+function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, branchBufferSize, _addLatency, _multLatency, _loadLatency, _storeLatency, _branchLatency, _cacheBlockSize, _cacheSize){
     for (let i = 0; i < adderResSize; i++) {
         adderReservationStation.push({ busy: 0, operation: "", Vj: 0, Vk: 0, Qj: 0, Qk: 0, result: 0 });
     }
@@ -65,6 +65,7 @@ function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, branch
     storeLatency = _storeLatency;
     branchLatency = _branchLatency;
     cacheBlockSize = _cacheBlockSize;
+    cacheSize = _cacheSize;
 }
 //---------------------------------------------------------------------------------------------------------
 
@@ -127,7 +128,7 @@ function InitializingMemory(size) { //values is an array of values
 
 function InitializingCache(_cacheSize) { //values is an array of values
     for(let i=0; i<_cacheSize; i++){
-        cache.push({ address: -1, data: null }); 
+        cache.push({ address: -1, data: null });
     };
 }
 //---------------------------------------------------------------------------------------------------------
@@ -151,22 +152,22 @@ function fetchToCache(memoryAddress, isDoubleWord) { // handling cache misses- i
 }
 
 function fetchFromCache(memoryAddress, operation) { //Fetching from cache 
-    let entry = cache.find(cacheEntry => cacheEntry.address === memoryAddress); // Find the cache entry with an empty slot
+    let entryIndex = cache.findIndex(cacheEntry => cacheEntry.address === memoryAddress); // Find the cache entry with an empty slot
     let isDoubleWord=false;
     if(operation === "L.D" || operation === "LD"){
         isDoubleWord=true;
     }
     // let entry = cache[memoryAddress];
-    if (entry === null) {
+    if (entryIndex === -1) {
         fetchToCache(memoryAddress, isDoubleWord);
         // console.log("memory to fetch to cache: ",memoryAddress);
+        entryIndex = cache.findIndex(cacheEntry => cacheEntry.address === memoryAddress); // Find the cache entry with an empty slot
         cacheMiss=true;
-        let entryIndex = cache.findIndex(cacheEntry => cacheEntry.address === memoryAddress); // Find the cache entry with an empty slot
-        console.log("ENTRY", entry);
     }
     if(isDoubleWord){
         return (cache[entryIndex]+cache[entryIndex+1]);
     }
+    
     
     return cache[entryIndex].data;
 }
@@ -577,7 +578,7 @@ function execute() {
         }
         if (buffer.busy === 1 && buffer.address !== -1) {//PROBLEM
             //     console.log("problem")
-            const memoryData = fetchFromCache(buffer.address, operation); // Simulate memory access
+            const memoryData = fetchFromCache(buffer.address, buffer.operation); // Simulate memory access
             loadBuffer[i].result = memoryData; // Fetch the data
         }
     }
@@ -807,7 +808,7 @@ function main() {
 }
 
 // Simulation management function
-async function initializeSimulation(stationSizes, instructionLatencies, instructions) {
+async function initializeSimulation(stationSizes, instructionLatencies, instructions, _cache) {
     console.log("STATION SIZES: ", stationSizes)
     console.log("INSTRUCTION LATENCIES: ", instructionLatencies)
     // Initialize Hardware
@@ -815,20 +816,20 @@ async function initializeSimulation(stationSizes, instructionLatencies, instruct
     const { fpAdd, fpMult, load, store, branch } = instructionLatencies;
 
     // Reset all simulation state
-    init(fpAdders, fpMultipliers, loadBuffers, storeBuffers, branchStations, fpAdd, fpMult, load, store, branch);
+    init(fpAdders, fpMultipliers, loadBuffers, storeBuffers, branchStations, fpAdd, fpMult, load, store, branch, _cache.cacheBlockSize, _cache.cacheSize);
 
     // Load Instructions
     Instructions = instructions;
 
     // Initialize Memory and Register File
-    InitializingMemory([10, 20, 30, 40, 50]); // Memory values at sequential addresses
+    InitializingMemory(_cache.cacheSize); // Memory values at sequential addresses
     const array = Array.from({ length: 64 }, () => 0);
     array[3] = 1;
     array[4] = 2;
     array[5] = 3;
     array[6] = 4;
     InitializingRegisterFile(array);
-    InitializingCache([null, null, null, null, null]);
+    InitializingCache(_cache.cacheSize);
 
     console.log("Simulation initialized");
     console.log("Register File:", RegisterFile);
@@ -865,6 +866,11 @@ async function initializeSimulation(stationSizes, instructionLatencies, instruct
             register: "R" + index,
             Qi: entry.waiting,
             data: entry.data
+        })),
+        cacheData: cache.map((entry, index) => ({
+            address: index,
+            tag: entry.address,
+            data: entry.data
         }))
     };
 
@@ -877,6 +883,7 @@ async function initializeSimulation(stationSizes, instructionLatencies, instruct
 
 async function advanceCycle(cycle) {
     console.log(`Advancing Cycle`);
+    console.log("CACHE!!!!!!!!!!", cache)
 
     // Execute the three main stages
     execute();
@@ -959,6 +966,11 @@ async function advanceCycle(cycle) {
         intRegData: RegisterFile.slice(32).map((entry, index) => ({
             register: "R" + index,
             Qi: entry.waiting,
+            data: entry.data
+        })),
+        cacheData: cache.map((entry, index) => ({
+            address: index,
+            tag: entry.address,
             data: entry.data
         }))
     };
