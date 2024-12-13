@@ -18,44 +18,45 @@ function App() {
     // const [instructions, setInstructions] = useState([]);
     const [instructions, setInstructions] = useState([
         {
-            "operation": "L.D",
-            "destination": 6,
+            "operation": "DADDI",
+            "destination": 33,
+            "source": 33,
+            "immediate": 24
+        },
+        {
+            "operation": "DADDI",
+            "destination": 34,
+            "source": 34,
             "immediate": 0
         },
         {
-            "operation": "ADD.D",
-            "destination": 7,
-            "source": 1,
-            "target": 3
-        },
-        {
             "operation": "L.D",
-            "destination": 2,
-            "immediate": 20
+            "destination": 0,
+            "immediate": 8
         },
         {
             "operation": "MUL.D",
-            "destination": 0,
-            "source": 2,
-            "target": 4
-        },
-        {
-            "operation": "SUB.D",
-            "destination": 8,
-            "source": 2,
-            "target": 6
-        },
-        {
-            "operation": "DIV.D",
-            "destination": 10,
+            "destination": 4,
             "source": 0,
-            "target": 6
+            "target": 2
         },
         {
             "operation": "S.D",
-            "source": 10,
-            "immediate": 0
+            "source": 4,
+            "immediate": 8
         },
+        {
+            "operation": "DSUBI",
+            "destination": 33,
+            "source": 33,
+            "immediate": 8
+        },
+        {
+            "operation": "BNE",
+            "source": 33,
+            "target": 34,
+            "immediate": 2
+        }
     ]);
     //TEST CASES
     // 1
@@ -213,7 +214,15 @@ function App() {
         const intLatencies = Object.fromEntries(Object.entries(instructionLatencies).map(([key, value]) => [key, parseInt(value)]));
         let modifiedCache = { ...cache };
         modifiedCache.cacheSize = modifiedCache.cacheSize / 4;
-        const result = await initializeSimulation(intStations, intLatencies, instructions, modifiedCache);
+        // make sure all immediates are ints
+        const modifiedInstructions = instructions.map(instruction => {
+            let modifiedInstruction = { ...instruction };
+            if (instruction.immediate) {
+                modifiedInstruction.immediate = parseInt(instruction.immediate);
+            }
+            return modifiedInstruction;
+        });
+        const result = await initializeSimulation(intStations, intLatencies, modifiedInstructions, modifiedCache);
         console.log("RESULT: ", result);
         setInstructionQueue(result.frontendUpdate.instructionQueue);
         setAddData(result.frontendUpdate.addData);

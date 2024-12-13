@@ -864,6 +864,8 @@ async function initializeSimulation(stationSizes, instructionLatencies, instruct
     array[4] = 2;
     array[5] = 3;
     array[6] = 4;
+    // array[33] = 12;
+    // array[34] = 6;
     InitializingRegisterFile(array);
     InitializingCache(_cache.cacheSize);
 
@@ -919,7 +921,7 @@ async function initializeSimulation(stationSizes, instructionLatencies, instruct
 
 async function advanceCycle(cycle) {
     console.log(`Advancing Cycle`);
-    console.log("CACHE!!!!!!!!", cache[2]);
+    console.log("MEMORY!!!!!!!!", memory);
 
     // Execute the three main stages
     execute();
@@ -1019,7 +1021,7 @@ async function advanceCycle(cycle) {
 }
 
 // Run the main method
-main();
+// main();
 
 export {
     initializeSimulation,
