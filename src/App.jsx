@@ -11,6 +11,7 @@ import MultiplicationStation from "./components/tables/Multiplication Station/Mu
 import LoadBuffer from "./components/tables/Load Buffer/LoadBuffer";
 import StoreBuffer from "./components/tables/Store Buffer/StoreBuffer";
 import BranchStation from "./components/tables/Branch Station/BranchStation";
+import Cache from "./components/tables/Cache/Cache";
 import { initializeSimulation, advanceCycle } from "./logic";
 
 function App() {
@@ -71,6 +72,9 @@ function App() {
         store: 2,
         branch: 1,
     });
+    const [cache, setCache] = useState({ cacheSize: 256, blockSize: 4 }); // 256 Bytes, 4 Bytes per block, 64 blocks total
+    const [cacheData, setCacheData] = useState([]);
+
     const [page, setPage] = useState(0);
     const [cycle, setCycle] = useState(0);
 
@@ -164,7 +168,9 @@ function App() {
         const intStations = Object.fromEntries(Object.entries(stationSizes).map(([key, value]) => [key, parseInt(value)]));
         // make sure all instruction latencies are ints
         const intLatencies = Object.fromEntries(Object.entries(instructionLatencies).map(([key, value]) => [key, parseInt(value)]));
-        const result = await initializeSimulation(intStations, intLatencies, instructions);
+        let modifiedCache = { ...cache };
+        modifiedCache.cacheSize = modifiedCache.cacheSize / 4;
+        const result = await initializeSimulation(intStations, intLatencies, instructions, modifiedCache);
         console.log("RESULT: ", result);
         setInstructionQueue(result.frontendUpdate.instructionQueue);
         setAddData(result.frontendUpdate.addData);
@@ -174,6 +180,7 @@ function App() {
         setFpRegData(result.frontendUpdate.fpRegData);
         setIntRegData(result.frontendUpdate.intRegData);
         setBranchData(result.frontendUpdate.branchData);
+        setCacheData(result.frontendUpdate.cacheData);
         setCycle(result.currentCycle);
         setPage(1);
     }
@@ -188,6 +195,7 @@ function App() {
         setFpRegData(result.frontendUpdate.fpRegData);
         setIntRegData(result.frontendUpdate.intRegData);
         setBranchData(result.frontendUpdate.branchData);
+        setCacheData(result.frontendUpdate.cacheData);
         setCycle(cycle + 1);
     }
 
@@ -221,7 +229,11 @@ function App() {
                             <h2 className="text-xl mb-3">
                                 Settings
                             </h2>
-                            <Setup stationSizes={stationSizes} setStationSizes={setStationSizes} instructionLatencies={instructionLatencies} setInstructionLatencies={setInstructionLatencies} />
+                            <Setup
+                                stationSizes={stationSizes} setStationSizes={setStationSizes}
+                                instructionLatencies={instructionLatencies} setInstructionLatencies={setInstructionLatencies}
+                                cache={cache} setCache={setCache}
+                            />
                         </div>
                     </div>
                     <div className="w-2/3">
@@ -250,6 +262,7 @@ function App() {
                             <LoadBuffer data={loadData} />
                             <StoreBuffer data={storeData} />
                             <BranchStation data={branchData} />
+                            <Cache data={cacheData} />
                         </div>
                         <div className="col-span-2">
                             <h2 className="text-xl mb-3">

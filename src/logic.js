@@ -162,6 +162,7 @@ function fetchFromCache(memoryAddress, operation) { //Fetching from cache
     } 
     // let entry = cache[memoryAddress];
     if (entryIndex === -1) {
+    if (entryIndex === -1) {
         fetchToCache(memoryAddress, isDoubleWord);
         // console.log("memory to fetch to cache: ",memoryAddress);
         entryIndex = cache.findIndex(cacheEntry => cacheEntry.address === memoryAddress);
@@ -837,7 +838,7 @@ function main() {
 }
 
 // Simulation management function
-async function initializeSimulation(stationSizes, instructionLatencies, instructions) {
+async function initializeSimulation(stationSizes, instructionLatencies, instructions, _cache) {
     console.log("STATION SIZES: ", stationSizes)
     console.log("INSTRUCTION LATENCIES: ", instructionLatencies)
     // Initialize Hardware
@@ -845,20 +846,20 @@ async function initializeSimulation(stationSizes, instructionLatencies, instruct
     const { fpAdd, fpMult, load, store, branch } = instructionLatencies;
 
     // Reset all simulation state
-    init(fpAdders, fpMultipliers, loadBuffers, storeBuffers, branchStations, fpAdd, fpMult, load, store, branch);
+    init(fpAdders, fpMultipliers, loadBuffers, storeBuffers, branchStations, fpAdd, fpMult, load, store, branch, _cache.cacheBlockSize, _cache.cacheSize);
 
     // Load Instructions
     Instructions = instructions;
 
     // Initialize Memory and Register File
-    InitializingMemory([10, 20, 30, 40, 50]); // Memory values at sequential addresses
+    InitializingMemory(_cache.cacheSize); // Memory values at sequential addresses
     const array = Array.from({ length: 64 }, () => 0);
     array[3] = 1;
     array[4] = 2;
     array[5] = 3;
     array[6] = 4;
     InitializingRegisterFile(array);
-    InitializingCache([null, null, null, null, null]);
+    InitializingCache(_cache.cacheSize);
 
     console.log("Simulation initialized");
     console.log("Register File:", RegisterFile);
@@ -895,6 +896,11 @@ async function initializeSimulation(stationSizes, instructionLatencies, instruct
             register: "R" + index,
             Qi: entry.waiting,
             data: entry.data
+        })),
+        cacheData: cache.map((entry, index) => ({
+            address: index,
+            tag: entry.address,
+            data: entry.data
         }))
     };
 
@@ -907,6 +913,7 @@ async function initializeSimulation(stationSizes, instructionLatencies, instruct
 
 async function advanceCycle(cycle) {
     console.log(`Advancing Cycle`);
+    console.log("CACHE!!!!!!!!!!", cache)
 
     // Execute the three main stages
     execute();
@@ -947,7 +954,7 @@ async function advanceCycle(cycle) {
                                         LOAD.includes(instruction.operation) ? loadLatency : storeLatency;
 
                         if (entry.busy === latency && ((entry.Qj === 0 && entry.Qk === 0) || (entry.Q === 0) || LOAD.includes(instruction.operation))) {
-                            InstructionQueue[i].execute = `${cycle}...`;
+                            InstructionQueue[i].execute = `${latency === 1 ? cycle : cycle + "..."}`;
                         }
                         else if (entry.busy === 1 && instruction.execute && instruction.execute.slice(-3) === "...") {
                             InstructionQueue[i].execute = InstructionQueue[i].execute + cycle;
@@ -989,6 +996,11 @@ async function advanceCycle(cycle) {
         intRegData: RegisterFile.slice(32).map((entry, index) => ({
             register: "R" + index,
             Qi: entry.waiting,
+            data: entry.data
+        })),
+        cacheData: cache.map((entry, index) => ({
+            address: index,
+            tag: entry.address,
             data: entry.data
         }))
     };
