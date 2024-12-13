@@ -163,19 +163,17 @@ function fetchFromCache(memoryAddress, operation) { //Fetching from cache
     }
     // let entry = cache[memoryAddress];
     if (entryIndex === -1) {
-        if (entryIndex === -1) {
-            fetchToCache(memoryAddress, isDoubleWord);
-            // console.log("memory to fetch to cache: ",memoryAddress);
-            entryIndex = cache.findIndex(cacheEntry => cacheEntry.address == memoryAddress);
-            cacheMiss = true;
-            // console.log("ENTRY", entry);
-        }
-        if (isDoubleWord) {
-            return (cache[entryIndex].data + cache[entryIndex + 1].data);
-        }
-
-        return cache[entryIndex].data;
+        fetchToCache(memoryAddress, isDoubleWord);
+        // console.log("memory to fetch to cache: ",memoryAddress);
+        entryIndex = cache.findIndex(cacheEntry => cacheEntry.address === memoryAddress);
+        cacheMiss = true;
+        // console.log("ENTRY", entry);
     }
+    if (isDoubleWord) {
+        return (cache[entryIndex].data + cache[entryIndex + 1].data);
+    }
+
+    return cache[entryIndex].data;
 }
 //---------------------------------------------------------------------------------------------------------
 
@@ -588,10 +586,9 @@ function execute() {
             //     console.log("problem")
             console.log("fetch Inputs: ", buffer.address, buffer.operation);
             const memoryData = fetchFromCache(buffer.address, buffer.operation); // Simulate memory access
-            console.log("memoryData: ", memoryData);
-            console.log("cacheMiss: ", cacheMiss);
             if (cacheMiss) {
                 loadBuffer[i].busy += cacheMissPenalty;
+                cacheMiss = false;
             }
             loadBuffer[i].result = memoryData; // Fetch the data
         }
@@ -686,7 +683,7 @@ function writeBack(cycle) {
         const { address, V } = buffer;
         console.log("writing to memory: ", buffer);
         let cacheIndex = cache.findIndex(cacheEntry => cacheEntry.address === address);
-        if (buffer.operation === "S.D" || buffer.operation === "SD" && V > 4294967295) {//4294967295
+        if ((buffer.operation === "S.D" || buffer.operation === "SD") && V > 4294967295) {//4294967295
             console.log("writing to memory: ", buffer);
 
             memory[address] = 4294967295;
@@ -797,9 +794,10 @@ function main() {
 
     // Simulation Loop
     let cycle = 0;
-    const maxCycles = 10; // Prevent infinite loops
+    const maxCycles = 25; // Prevent infinite loops
     while (cycle < maxCycles) {
         console.log(`Cycle ${cycle}`);
+        console.log("CACHE!!!!!!!!", cache[2]);
 
 
         execute();
@@ -917,6 +915,7 @@ async function initializeSimulation(stationSizes, instructionLatencies, instruct
 
 async function advanceCycle(cycle) {
     console.log(`Advancing Cycle`);
+    console.log("CACHE!!!!!!!!", cache[2]);
 
     // Execute the three main stages
     execute();
@@ -956,7 +955,7 @@ async function advanceCycle(cycle) {
                             MUL.includes(instruction.operation) || DIV.includes(instruction.operation) ? multLatency :
                                 LOAD.includes(instruction.operation) ? loadLatency : storeLatency;
 
-                        if (entry.busy === latency && ((entry.Qj === 0 && entry.Qk === 0) || (entry.Q === 0) || LOAD.includes(instruction.operation))) {
+                        if (entry.busy === latency && !instruction.execute && ((entry.Qj === 0 && entry.Qk === 0) || (entry.Q === 0) || LOAD.includes(instruction.operation))) {
                             InstructionQueue[i].execute = `${latency === 1 ? cycle : cycle + "..."}`;
                         }
                         else if (entry.busy === 1 && instruction.execute && instruction.execute.slice(-3) === "...") {
@@ -1008,6 +1007,7 @@ async function advanceCycle(cycle) {
         }))
     };
 
+    console.log(memory);
     return {
         isSimulationComplete,
         frontendUpdate,
