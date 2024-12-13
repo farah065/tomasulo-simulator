@@ -491,6 +491,9 @@ function issueInstruction(cycle) {
                 writeToRegisterFile(destination, -1, "L" + index);
             }
         } else if (STORE.includes(operation)) {
+            if(storeBuffer.findIndex(entry => entry.busy === 0)){
+
+            }
             const index = storeBuffer.findIndex(entry => entry.busy === 0);
             if (index !== -1) {
                 storeBuffer[index] = {
@@ -583,7 +586,11 @@ function execute() {
     // Execute Load Buffer
     for (let i = 0; i < loadBuffer.length; i++) { // deal with cache miss here
         const buffer = loadBuffer[i];
-        if (buffer.busy > 0) { // Data is not yet fetched
+        let sameAddress = -1;
+        if(loadBuffer[i].address!== -1){
+            sameAddress = storeBuffer.findIndex(entry => entry.address === buffer.address);
+        }
+        if (buffer.busy>0 && (sameAddress === -1 ||  loadBuffer[i].busy < loadLatency+1)) { // Data is not yet fetched and either there's no similar one in store buffer or it was already executing
             loadBuffer[i].busy -= 1;
         }
         if (buffer.busy === 1 && buffer.address !== -1) {//PROBLEM
@@ -601,7 +608,19 @@ function execute() {
     // Execute Store Buffer
     for (let i = 0; i < storeBuffer.length; i++) {
         const buffer = storeBuffer[i];
-        if (buffer.busy > 0 && buffer.Q === 0) {
+        let sameAddressLoad = -1;
+        let sameAddressStore = -1;
+        if(storeBuffer[i].address!== -1){
+            sameAddressLoad = loadBuffer.findIndex(entry => entry.address === storeBuffer[i].address);
+            // sameAddressStore = storeBuffer.findIndex(entry => entry.address === storeBuffer[i].address && entry.id !== storeBuffer[i].id);
+            sameAddressStore = storeBuffer.findIndex(
+                (entry, index) => entry.address === storeBuffer[i].address && entry.id < storeBuffer[i].id
+            );
+            
+        }
+        console.log("sameAddressstore:" , sameAddressLoad);
+        console.log("sameAddressLoad:" , sameAddressStore);
+        if(buffer.busy>0 && buffer.Q === 0 && ((sameAddressLoad === -1 && sameAddressStore === -1 ) || storeBuffer[i].busy < storeLatency+1)){ // either there's no similar one in store buffer or it was already executing
             storeBuffer[i].busy -= 1;
         }
     }
@@ -687,14 +706,24 @@ function writeBack(cycle) {
         const { address, V } = buffer;
         console.log("writing to memory: ", buffer);
         let cacheIndex = cache.findIndex(cacheEntry => cacheEntry.address === address);
-        if ((buffer.operation === "S.D" || buffer.operation === "SD") && V > 4294967295) {//4294967295
+        if ((buffer.operation === "S.D" || buffer.operation === "SD")) {//4294967295
             console.log("writing to memory: ", buffer);
 
-            memory[address] = 4294967295;
-            memory[address + 1] = V - 4294967295;
-            if (cacheIndex !== -1) {
-                cache[cacheIndex].data = 4294967295;
-                cache[cacheIndex + 1].data = V - 4294967295;
+            if(V > 4294967295){
+                memory[address] = 4294967295;
+                memory[address + 1] = V - 4294967295;
+                if (cacheIndex !== -1) {
+                    cache[cacheIndex].data = 4294967295;
+                    cache[cacheIndex + 1].data = V - 4294967295;
+                }
+
+            }else{
+                memory[address] = V;
+                memory[address + 1] = 0;
+                if (cacheIndex !== -1) {
+                    cache[cacheIndex].data = V;
+                    cache[cacheIndex + 1].data = 0;
+                }
             }
 
         } else {

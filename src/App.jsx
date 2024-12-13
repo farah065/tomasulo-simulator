@@ -17,46 +17,46 @@ import { initializeSimulation, advanceCycle } from "./logic";
 function App() {
     // const [instructions, setInstructions] = useState([]);
     const [instructions, setInstructions] = useState([
-        {
-            "operation": "DADDI",
-            "destination": 33,
-            "source": 33,
-            "immediate": 24
-        },
-        {
-            "operation": "DADDI",
-            "destination": 34,
-            "source": 34,
-            "immediate": 0
-        },
-        {
-            "operation": "L.D",
-            "destination": 0,
-            "immediate": 8
-        },
-        {
-            "operation": "MUL.D",
-            "destination": 4,
-            "source": 0,
-            "target": 2
-        },
-        {
-            "operation": "S.D",
-            "source": 4,
-            "immediate": 8
-        },
-        {
-            "operation": "DSUBI",
-            "destination": 33,
-            "source": 33,
-            "immediate": 8
-        },
-        {
-            "operation": "BNE",
-            "source": 33,
-            "target": 34,
-            "immediate": 2
-        }
+        // {
+        //     "operation": "DADDI",
+        //     "destination": 33,
+        //     "source": 33,
+        //     "immediate": 24
+        // },
+        // {
+        //     "operation": "DADDI",
+        //     "destination": 34,
+        //     "source": 34,
+        //     "immediate": 0
+        // },
+        // {
+        //     "operation": "L.D",
+        //     "destination": 0,
+        //     "immediate": 8
+        // },
+        // {
+        //     "operation": "MUL.D",
+        //     "destination": 4,
+        //     "source": 0,
+        //     "target": 2
+        // },
+        // {
+        //     "operation": "S.D",
+        //     "source": 4,
+        //     "immediate": 8
+        // },
+        // {
+        //     "operation": "DSUBI",
+        //     "destination": 33,
+        //     "source": 33,
+        //     "immediate": 8
+        // },
+        // {
+        //     "operation": "BNE",
+        //     "source": 33,
+        //     "target": 34,
+        //     "immediate": 2
+        // }
     ]);
     //TEST CASES
     // 1
