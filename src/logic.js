@@ -523,7 +523,11 @@ function execute() {
     // Execute Load Buffer
     for (let i = 0; i < loadBuffer.length; i++) { // deal with cache miss here
         const buffer = loadBuffer[i];
-        if (buffer.busy>0) { // Data is not yet fetched
+        let sameAddress = -1;
+        if(loadBuffer[i].address!== -1){
+            sameAddress = storeBuffer.findIndex(entry => entry.address === buffer.address);
+        }
+        if (buffer.busy>0 && (sameAddress === -1 ||  loadBuffer[i].busy < loadLatency+1)) { // Data is not yet fetched and either there's no similar one in store buffer or it was already executing
             loadBuffer[i].busy -= 1;
         }
         if(buffer.busy===1 && buffer.address !== -1){//PROBLEM
@@ -536,14 +540,23 @@ function execute() {
     // Execute Store Buffer
     for (let i = 0; i < storeBuffer.length; i++) {
         const buffer = storeBuffer[i];
-        if(buffer.busy>0 && buffer.Q === 0){
+        let sameAddressLoad = -1;
+        let sameAddressStore = -1;
+        if(storeBuffer[i].address!== -1){
+            sameAddressLoad = loadBuffer.findIndex(entry => entry.address === storeBuffer[i].address);
+            sameAddressStore = storeBuffer.findIndex(entry => entry.address === storeBuffer[i].address && entry.busy !== storeBuffer[i].busy);
+        }
+        console.log("sameAddressstore:" , sameAddressLoad);
+        console.log("sameAddressLoad:" , sameAddressStore);
+        if(buffer.busy>0 && buffer.Q === 0 && ((sameAddressLoad === -1 && sameAddressStore === -1 ) || storeBuffer[i].busy < storeLatency+1)){ // either there's no similar one in store buffer or it was already executing
             storeBuffer[i].busy -= 1;
         }
         if (buffer.busy === 1 && buffer.address !== -1) { // Data is ready for storing
             console.log("enetered store exec");
-            const memoryAddress = buffer.address;
-            const value = buffer.V;
-            memory[memoryAddress] = value; // Store value in memory
+            //store's execute is done in tghe write back because its exec is writing back to memory
+            //const memoryAddress = buffer.address;
+            //const value = buffer.V;
+            //memory[memoryAddress] = value; // Store value in memory
         }
     }
 }
@@ -608,7 +621,8 @@ function writeBack() {
         if (buffer.busy === 0 && buffer.address !== -1) { // Store operation ready for memory write
             const { address, V } = buffer;
             memory[address] = V; // Store value to memory
-            storeBuffer[i].busy = 0; // Mark the store buffer entry as free
+            //storeBuffer[i].busy = 0; // Mark the store buffer entry as free
+            removeInstructionFromStoreBuffer(i);
         }
     }
 
@@ -634,9 +648,9 @@ function main() {
     const brnchBufferSize = 3; // Size of the store buffer
 
     const addLatency = 2;     // Latency for addition/subtraction
-    const multLatency = 3;   // Latency for multiplication/division
-    const loadLatency = 2;    // Latency for load
-    const storeLatency = 2;   // Latency for store
+    const multLatency = 1;   // Latency for multiplication/division
+    const loadLatency = 3;    // Latency for load
+    const storeLatency = 5;   // Latency for store
     const branchLatency = 2;   // Latency for store
 
     init(adderResSize, multResSize, loadBufferSize, storeBufferSize, brnchBufferSize, addLatency, multLatency, loadLatency, storeLatency, branchLatency);
@@ -652,16 +666,22 @@ function main() {
     //     { operation: "S.D", source: 6, immediate: 0 }          // S.D F6, 0
     // );
     Instructions.push(
-        { operation: "L.D", destination: 6, immediate: 0 },      // L.D F6, 0
-        { operation: "MUL.D", destination: 0, source: 6, target: 4 }, // MUL.D F0, F6, F4
-        { operation: "SUB.D", destination: 8, source: 0, target: 6 }, // SUB.D F8, F0, F6
-        { operation: "BNE", destination: 1, source: 8, target: 1 }, // SUB.D F8, F0, F6
-        { operation: "S.D", source: 8, immediate: 0 }          // S.D F6, 0
+       
+        { operation: "S.D", source: 8, immediate: 0 },                // S.D F8, 0 => mem[0] = 100
+        { operation: "SUB.D", destination: 8, source: 1, target: 0 }, // SUB.D F8, F1, F0 => F8 =  20
+        { operation: "S.D", source: 8, immediate: 0 }                 // S.D F8, 0 mem[0] = 20
+        //correct: F6=10
+
+        //Make memory like registers
+        //{ operation: "L.D", destination: 6, immediate: 0 } ,     // L.D F6, 0
+        //{ operation: "MUL.D", destination: 0, source: 6, target: 4 }, // MUL.D F0, F6, F4
+        //{ operation: "SUB.D", destination: 8, source: 0, target: 6 }, // SUB.D F8, F0, F6
+        //{ operation: "BNE", destination: 1, source: 8, target: 1 }, // SUB.D F8, F0, F6
     );
     
     // Initialize Memory and Register File
     InitializingMemory([10, 20, 30, 40, 50]); // Memory values at sequential addresses
-    InitializingRegisterFile([0, 20, 0, 3, 3, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,0]); // Initialize registers F0-F10
+    InitializingRegisterFile([0, 20, 0, 3, 3, 0, 0, 0, 100, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,0]); // Initialize registers F0-F10
     InitializingCache([null, null, null, null, null]);
     // InitializingCache([-1, -1, -1, -1, -1]);
 
@@ -672,7 +692,7 @@ function main() {
 
     // Simulation Loop
     let cycle = 0;
-    const maxCycles = 17; // Prevent infinite loops
+    const maxCycles = 30; // Prevent infinite loops
     while (cycle < maxCycles) {
         console.log(`Cycle ${cycle}`);
         
@@ -686,14 +706,14 @@ function main() {
         
         
 
-        // if (InstructionQueue.length === Instructions.length && 
-        //     adderReservationStation.every(station => station.busy === 0) &&
-        //     multiplierReservationStation.every(station => station.busy === 0) &&
-        //     loadBuffer.every(buffer => buffer.busy === 0) &&
-        //     storeBuffer.every(buffer => buffer.busy === 0) &&
-        //     branchStation.every(buffer => buffer.busy === 0)) {
-        //     break; // All instructions have been executed
-        // }
+         if (InstructionQueue.length === Instructions.length && 
+             adderReservationStation.every(station => station.busy === 0) &&
+             multiplierReservationStation.every(station => station.busy === 0) &&
+             loadBuffer.every(buffer => buffer.busy === 0) &&
+             storeBuffer.every(buffer => buffer.busy === 0) &&
+             branchStation.every(buffer => buffer.busy === 0)) {
+             break; // All instructions have been executed
+         }
 
         cycle++;
         
@@ -724,11 +744,5 @@ main();
 //----------------------------------------------------
 
 //TODO:
-//2- implement store and load conflict
-//3- add latencies for cache miss
- 
-
-
-// Testing:
-// 1- test overloading a station
-// 3- test load and store conflict
+//1- branch shouldnt write back -> updates pc in exec not write back
+//2- add latencies for cache miss
