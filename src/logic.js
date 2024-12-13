@@ -162,7 +162,6 @@ function fetchFromCache(memoryAddress, operation) { //Fetching from cache
     } 
     // let entry = cache[memoryAddress];
     if (entryIndex === -1) {
-    if (entryIndex === -1) {
         fetchToCache(memoryAddress, isDoubleWord);
         // console.log("memory to fetch to cache: ",memoryAddress);
         entryIndex = cache.findIndex(cacheEntry => cacheEntry.address === memoryAddress);
