@@ -899,7 +899,7 @@ async function advanceCycle(cycle) {
                                         LOAD.includes(instruction.operation) ? loadLatency : storeLatency;
 
                         if (entry.busy === latency && ((entry.Qj === 0 && entry.Qk === 0) || (entry.Q === 0) || LOAD.includes(instruction.operation))) {
-                            InstructionQueue[i].execute = `${cycle}...`;
+                            InstructionQueue[i].execute = `${latency === 1 ? cycle : cycle + "..."}`;
                         }
                         else if (entry.busy === 1 && instruction.execute && instruction.execute.slice(-3) === "...") {
                             InstructionQueue[i].execute = InstructionQueue[i].execute + cycle;

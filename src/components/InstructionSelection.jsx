@@ -12,7 +12,7 @@ function InstructionSelection({ instructions, setInstructions }) {
     const destImm = ["L.S", "L.D", "LW", "LD"];
     const [instruction, setInstruction] = useState({
         operation: "ADD.S",
-        destination: 1,
+        destination: 0,
         source: 0,
         target: 0,
         immediate: 0,
@@ -64,6 +64,41 @@ function InstructionSelection({ instructions, setInstructions }) {
         setInstructions([...instructions, finalInstruction]);
     }
 
+    function getOptions(destination) {
+        let options = Array.from({ length: 32 }, (_, i) => ({ value: i, label: `F${i}` }))
+            .concat(Array.from({ length: 32 }, (_, i) => ({ value: i + 32, label: `R${i}` })))
+        if (["DADDI", "DSUBI", "BEQ", "BNE", "SW", "SD", "LW", "LD"].includes(instruction.operation)) {
+            // remove F registers
+            options = options.filter((option) => option.value >= 32);
+            if (!options.find((option) => option.value == instruction.source)) {
+                setInstruction({ ...instruction, source: options[0].value });
+            }
+            if (!options.find((option) => option.value == instruction.target)) {
+                setInstruction({ ...instruction, target: options[0].value });
+            }
+            if (destination) {
+                // remove R0 register
+                options = options.filter((option) => option.value !== 32);
+            }
+        }
+        else {
+            // remove R registers
+            options = options.filter((option) => option.value < 32);
+            if (!options.find((option) => option.value == instruction.source)) {
+                setInstruction({ ...instruction, source: options[0].value });
+            }
+            if (!options.find((option) => option.value == instruction.target)) {
+                setInstruction({ ...instruction, target: options[0].value });
+            }
+        }
+
+        if (!options.find((option) => option.value == instruction.destination)) {
+            setInstruction({ ...instruction, destination: options[0].value });
+        }
+
+        return options;
+    }
+
     return (
         <div className="space-y-4">
             <div>
@@ -74,7 +109,9 @@ function InstructionSelection({ instructions, setInstructions }) {
                     <ReactSelect
                         options={operations.map((operation) => ({ value: operation, label: operation }))}
                         defaultValue={{ value: "ADD.S", label: "ADD.S" }}
-                        onChange={(selectedOption) => setInstruction({ ...instruction, operation: selectedOption.value })}
+                        onChange={(selectedOption) => {
+                            setInstruction({ ...instruction, operation: selectedOption.value });
+                        }}
                     />
                 </div>
             </div>
@@ -85,9 +122,9 @@ function InstructionSelection({ instructions, setInstructions }) {
                     </h2>
                     <div className="w-full">
                         <ReactSelect
-                            options={Array.from({ length: 32 }, (_, i) => ({ value: i, label: `F${i}` }))
-                                .concat(Array.from({ length: 31 }, (_, i) => ({ value: i + 1 + 32, label: `R${i + 1}` })))}
-                            defaultValue={{ value: 1, label: "F1" }}
+                            options={getOptions(true)}
+                            defaultValue={getOptions(true)[0]}
+                            value={instruction.destination == 0 ? 0 : getOptions(true).find((option) => option.value == instruction.destination) || getOptions(true)[0]}
                             onChange={(selectedOption) => setInstruction({ ...instruction, destination: selectedOption.value })}
                         />
                     </div>
@@ -100,9 +137,9 @@ function InstructionSelection({ instructions, setInstructions }) {
                     </h2>
                     <div className="w-full">
                         <ReactSelect
-                            options={Array.from({ length: 32 }, (_, i) => ({ value: i, label: `F${i}` }))
-                                .concat(Array.from({ length: 32 }, (_, i) => ({ value: i + 32, label: `R${i}` })))}
-                            defaultValue={{ value: 0, label: "F0" }}
+                            options={getOptions(false)}
+                            defaultValue={getOptions(false)[0]}
+                            value={instruction.source == 0 ? 0 : getOptions(false).find((option) => option.value == instruction.source) || getOptions(false)[0]}
                             onChange={(selectedOption) => setInstruction({ ...instruction, source: selectedOption.value })}
                         />
                     </div>
@@ -115,9 +152,9 @@ function InstructionSelection({ instructions, setInstructions }) {
                     </h2>
                     <div className="w-full">
                         <ReactSelect
-                            options={Array.from({ length: 32 }, (_, i) => ({ value: i, label: `F${i}` }))
-                                .concat(Array.from({ length: 32 }, (_, i) => ({ value: i + 32, label: `R${i}` })))}
-                            defaultValue={{ value: 0, label: "F0" }}
+                            options={getOptions(false)}
+                            defaultValue={getOptions(false)[0]}
+                            value={instruction.target == 0 ? 0 : getOptions(false).find((option) => option.value == instruction.target) || getOptions(false)[0]}
                             onChange={(selectedOption) => setInstruction({ ...instruction, target: selectedOption.value })}
                         />
                     </div>

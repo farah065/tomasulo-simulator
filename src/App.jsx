@@ -71,6 +71,7 @@ function App() {
         store: 2,
         branch: 1,
     });
+    const [cache, setCache] = useState({cacheSize: 0, blockSize: 0});
     const [page, setPage] = useState(0);
     const [cycle, setCycle] = useState(0);
 
