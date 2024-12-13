@@ -625,6 +625,7 @@ function writeBack(cycle) {
             const { address, V } = buffer;
             memory[address] = V; // Store value to memory
             storeBuffer[i].busy = 0; // Mark the store buffer entry as free
+            InstructionQueue[storeBuffer[i].id].writeResult = cycle;
             removeInstructionFromStoreBuffer(i);
         }
     }
