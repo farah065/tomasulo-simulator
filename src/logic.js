@@ -587,6 +587,7 @@ function execute() {
             const memoryData = fetchFromCache(buffer.address, buffer.operation); // Simulate memory access
             if(cacheMiss){
                 loadBuffer[i].busy+=cacheMissPenalty;
+                cacheMiss=false;
             }
             loadBuffer[i].result = memoryData; // Fetch the data
         }
@@ -681,7 +682,7 @@ function writeBack(cycle) {
         const { address, V } = buffer;
         console.log("writing to memory: ",buffer);
         let cacheIndex = cache.findIndex(cacheEntry => cacheEntry.address === address);
-        if(buffer.operation === "S.D" || buffer.operation === "SD" && V>4294967295){//4294967295
+        if((buffer.operation === "S.D" || buffer.operation === "SD") && V>4294967295){//4294967295
             console.log("writing to memory: ",buffer);
 
             memory[address]=4294967295;
@@ -1003,7 +1004,8 @@ async function advanceCycle(cycle) {
             data: entry.data
         }))
     };
-
+    
+    console.log(memory);
     return {
         isSimulationComplete,
         frontendUpdate,
