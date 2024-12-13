@@ -29,16 +29,16 @@ let storeBuffer = []; //{busy,Address, V, Q}
 let branchStation = [];
 //---------------------------------------------------------------------------------------------------------
 
-    const ADD = ["ADD.S", "ADD.D", "DADDI"]; 
-    const SUB = ["SUB.S", "SUB.D", "DSUBI"]; 
-    const MUL = ["MUL.S", "MUL.D"];
-    const DIV = ["DIV.S", "DIV.D"];
-    const BRNCH = ["BEQ", "BNE"];
-    const STORE = ["S.S", "S.D", "SW", "SD"];
-    const LOAD = ["L.S", "L.D", "LW", "LD"];
+const ADD = ["ADD.S", "ADD.D", "DADDI"];
+const SUB = ["SUB.S", "SUB.D", "DSUBI"];
+const MUL = ["MUL.S", "MUL.D"];
+const DIV = ["DIV.S", "DIV.D"];
+const BRNCH = ["BEQ", "BNE"];
+const STORE = ["S.S", "S.D", "SW", "SD"];
+const LOAD = ["L.S", "L.D", "LW", "LD"];
 
 //1)Initializing
-function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, branchBufferSize, _addLatency, _multLatency, _loadLatency, _storeLatency, _branchLatency, _cacheBlockSize, _cacheSize){
+function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, branchBufferSize, _addLatency, _multLatency, _loadLatency, _storeLatency, _branchLatency, _blockSize, _cacheSize) {
     for (let i = 0; i < adderResSize; i++) {
         adderReservationStation.push({ busy: 0, operation: "", Vj: 0, Vk: 0, Qj: 0, Qk: 0, result: 0 });
     }
@@ -48,15 +48,15 @@ function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, branch
     }
 
     for (let i = 0; i < loadBufferSize; i++) {
-        loadBuffer.push({ busy:0 , operation:"", address:-1, result: 0}); 
+        loadBuffer.push({ busy: 0, operation: "", address: -1, result: 0 });
     }
 
     for (let i = 0; i < storeBufferSize; i++) {
-        storeBuffer.push({ busy:0 , operation:"", address:-1 , V: 0, Q: 0});
+        storeBuffer.push({ busy: 0, operation: "", address: -1, V: 0, Q: 0 });
     }
 
     for (let i = 0; i < branchBufferSize; i++) {
-        branchStation.push({ busy:0 , operation:"", Vj: 0, Vk: 0, Qj: 0, Qk: 0, brnchDestination: 0, result: 0});
+        branchStation.push({ busy: 0, operation: "", Vj: 0, Vk: 0, Qj: 0, Qk: 0, brnchDestination: 0, result: 0 });
     }
 
     addLatency = _addLatency;
@@ -64,7 +64,7 @@ function init(adderResSize, multResSize, loadBufferSize, storeBufferSize, branch
     loadLatency = _loadLatency;
     storeLatency = _storeLatency;
     branchLatency = _branchLatency;
-    cacheBlockSize = _cacheBlockSize;
+    cacheBlockSize = _blockSize;
     cacheSize = _cacheSize;
 }
 //---------------------------------------------------------------------------------------------------------
@@ -90,7 +90,7 @@ function fetchInstruction() {
             currInstruction = { operation: fetchedInstruction.operation, operand1: fetchedInstruction.source, operand2: fetchedInstruction.immediate, destination: fetchedInstruction.destination };
         }
         else if (srcTgtImm.includes(fetchedInstruction.operation)) {
-            currInstruction = { operation: fetchedInstruction.operation , operand1: fetchedInstruction.source , operand2: fetchedInstruction.target, destination: fetchedInstruction.immediate};
+            currInstruction = { operation: fetchedInstruction.operation, operand1: fetchedInstruction.source, operand2: fetchedInstruction.target, destination: fetchedInstruction.immediate };
         }
         else if (srcImm.includes(fetchedInstruction.operation)) {
             currInstruction = { operation: fetchedInstruction.operation, operand1: fetchedInstruction.source, operand2: 0, destination: fetchedInstruction.immediate };
@@ -121,16 +121,16 @@ function InitializingMemory(size) { //values is an array of values
     //     // console.log("idk: ", {value, index})
     //     memory.push({ waiting: index, data: value }); // Assign sequential numbers starting from 1
     // });
-    for( let i = 0; i<size; i++){
-        memory.push(i*10);
+    for (let i = 0; i < size; i++) {
+        memory.push(i * 10);
     }
 }
 
 function InitializingCache(_cacheSize) { //values is an array of values
     console.log("init cache ");
-    for(let i=0; i<_cacheSize; i++){
-        console.log("init cache ",i);
-        cache.push({ address: -1, data: null }); 
+    for (let i = 0; i < _cacheSize; i++) {
+        console.log("init cache ", i);
+        cache.push({ address: -1, data: null });
     };
 }
 //---------------------------------------------------------------------------------------------------------
@@ -139,12 +139,13 @@ function InitializingCache(_cacheSize) { //values is an array of values
 //4)Cache
 function fetchToCache(memoryAddress, isDoubleWord) { // handling cache misses- if fetching a doubleword, then check if block size <8, if it is then 2 fetches will be needed, if not then continue as normal.
     // const entry = memory.find(entry => entry.address === memoryAddress);
-    let iterations = cacheBlockSize/4
-    if((isDoubleWord)&&cacheBlockSize<8){
-        iterations+=1;
+    let iterations = cacheBlockSize / 4
+    console.log("FETCHING TO CACHE: ", memoryAddress, isDoubleWord, cacheBlockSize);
+    if ((isDoubleWord) && cacheBlockSize < 8) {
+        iterations += 1;
     }
-    for(let i=0; i<iterations;i++){
-        const entry = memory[memoryAddress+i];
+    for (let i = 0; i < iterations; i++) {
+        const entry = memory[memoryAddress + i];
         // console.log("mementry: ", entry);
         const cacheEntryIndex = cache.findIndex(cacheEntry => cacheEntry.address === -1); // Find the cache entry with an empty slot
         cache[cacheEntryIndex].data = entry;
@@ -155,25 +156,26 @@ function fetchToCache(memoryAddress, isDoubleWord) { // handling cache misses- i
 
 function fetchFromCache(memoryAddress, operation) { //Fetching from cache 
     let entryIndex = cache.findIndex(cacheEntry => cacheEntry.address === memoryAddress); // Find the cache entry with an empty slot
-    let isDoubleWord=false;
+    let isDoubleWord = false;
     console.log("FETCHING FROM CACHE: ", memoryAddress, operation);
-    if(operation === "L.D" || operation === "LD"){
-        isDoubleWord=true;
-    } 
+    if (operation === "L.D" || operation === "LD") {
+        isDoubleWord = true;
+    }
     // let entry = cache[memoryAddress];
     if (entryIndex === -1) {
-    if (entryIndex === -1) {
-        fetchToCache(memoryAddress, isDoubleWord);
-        // console.log("memory to fetch to cache: ",memoryAddress);
-        entryIndex = cache.findIndex(cacheEntry => cacheEntry.address === memoryAddress);
-        cacheMiss=true;
-        // console.log("ENTRY", entry);
-    }
-    if(isDoubleWord){
-        return (cache[entryIndex].data + cache[entryIndex+1].data);
-    }
+        if (entryIndex === -1) {
+            fetchToCache(memoryAddress, isDoubleWord);
+            // console.log("memory to fetch to cache: ",memoryAddress);
+            entryIndex = cache.findIndex(cacheEntry => cacheEntry.address == memoryAddress);
+            cacheMiss = true;
+            // console.log("ENTRY", entry);
+        }
+        if (isDoubleWord) {
+            return (cache[entryIndex].data + cache[entryIndex + 1].data);
+        }
 
-    return cache[entryIndex].data;
+        return cache[entryIndex].data;
+    }
 }
 //---------------------------------------------------------------------------------------------------------
 
@@ -218,7 +220,7 @@ function updateAdderReservationStation(tag, data) {
             adderReservationStation[indexj].Vj = data;
             adderReservationStation[indexj].Qj = 0;
         }
-    
+
         const indexk = adderReservationStation.findIndex(entry => entry.Qk === tag);
         if (indexk !== -1) { // -1 means the item wasn't found
             adderReservationStation[indexk].Vk = data;
@@ -240,7 +242,7 @@ function addInstructionToAdderReservationStation(instruction) {
 
 function removeInstructionFromAdderReservationStation(index) {
     // adderReservationStation[index].busy= 0;
-    adderReservationStation[index] = { busy:0 , operation:"", Vj: 0, Vk: 0, Qj: 0, Qk: 0, result: 0};
+    adderReservationStation[index] = { busy: 0, operation: "", Vj: 0, Vk: 0, Qj: 0, Qk: 0, result: 0 };
 }
 //---------------------------------------------------------------------------------------------------------
 
@@ -254,7 +256,7 @@ function updateMultiplierReservationStation(tag, data) {
             multiplierReservationStation[indexj].Vj = data;
             multiplierReservationStation[indexj].Qj = 0;
         }
-    
+
         const indexk = multiplierReservationStation.findIndex(entry => entry.Qk === tag);
         if (indexk !== -1) { // -1 means the item wasn't found
             multiplierReservationStation[indexk].Vk = data;
@@ -277,21 +279,21 @@ function addInstructionToMultiplierReservationStation(instruction) {
 
 function removeInstructionFromMultiplierReservationStation(index) {
     // multiplierReservationStation[index].busy= 0;
-    multiplierReservationStation[index] = { busy:0 , operation:"", Vj: 0, Vk: 0, Qj: 0, Qk: 0, result: 0};
+    multiplierReservationStation[index] = { busy: 0, operation: "", Vj: 0, Vk: 0, Qj: 0, Qk: 0, result: 0 };
 }
 //---------------------------------------------------------------------------------------------------------
 
 
 //Branch Station
 //{ busy:0 , operation:"", Vj: 0, Vk: 0, Qj: 0, Qk: 0, result: 0}
-function updateBranchReservationStation(tag, data){
+function updateBranchReservationStation(tag, data) {
     branchStation.forEach(() => {
         const indexj = branchStation.findIndex(entry => entry.Qj === tag);
         if (indexj !== -1) { // -1 means the item wasn't found
             branchStation[indexj].Vj = data;
             branchStation[indexj].Qj = 0;
         }
-    
+
         const indexk = storeBuffer.findIndex(entry => entry.Qk === tag);
         if (indexk !== -1) { // -1 means the item wasn't found
             branchStation[indexk].Vk = data;
@@ -300,20 +302,20 @@ function updateBranchReservationStation(tag, data){
     })
 }
 
-function addInstructionToBranchReservationStation(instruction){
+function addInstructionToBranchReservationStation(instruction) {
     // const index = branchStation.findIndex(entry => entry.busy === 0);
-    const index = branchStation.findIndex(entry => entry.operation===""); 
+    const index = branchStation.findIndex(entry => entry.operation === "");
     if (index !== -1) { // -1 means the item wasn't found
-        branchStation[index]= instruction;
+        branchStation[index] = instruction;
     }
-    else{
+    else {
         return -1;
     }
 }
 
-function removeInstructionFromBranchReservationStation(index){
+function removeInstructionFromBranchReservationStation(index) {
     // branchStation[index].busy= 0;
-    branchStation[index] = { busy:0 , operation:"", Vj: 0, Vk: 0, Qj: 0, Qk: 0, brnchDestination: 0, result: 0 };
+    branchStation[index] = { busy: 0, operation: "", Vj: 0, Vk: 0, Qj: 0, Qk: 0, brnchDestination: 0, result: 0 };
 }
 //-------------------------------------------------------------------------------------
 
@@ -334,7 +336,7 @@ function addInstructionToLoadBuffer(instruction) {
 
 function removeInstructionFromLoadBuffer(index) {
     // loadBuffer[index].busy= 0;
-    loadBuffer[index] = { busy:0 , operation:"", address:-1, result: 0};
+    loadBuffer[index] = { busy: 0, operation: "", address: -1, result: 0 };
 }
 //---------------------------------------------------------------------------------------------------------
 
@@ -366,43 +368,43 @@ function addInstructionToStoreBuffer(instruction) {
 
 function removeInstructionFromStoreBuffer(index) {
     // storeBuffer[index].busy= 0;
-    storeBuffer[index] = { busy: 0, operation:"", address: -1, V: 0, Q: 0 };
+    storeBuffer[index] = { busy: 0, operation: "", address: -1, V: 0, Q: 0 };
 }
 //---------------------------------------------------------------------------------------------------------
 
 //10)Adder
-function ALU(operation, operand1, operand2){
-        if(ADD.includes(operation)){
-            return operand1 + operand2;
+function ALU(operation, operand1, operand2) {
+    if (ADD.includes(operation)) {
+        return operand1 + operand2;
+    }
+    else if (SUB.includes(operation)) {
+        return operand1 - operand2;
+    }
+    else if (MUL.includes(operation)) {
+        return operand1 * operand2;
+    }
+    else if (DIV.includes(operation)) {
+        if (operand2 === 0) {
+            throw new Error("Division by zero is not allowed.");
         }
-        else if(SUB.includes(operation)){
-            return operand1 - operand2;
+        return operand1 / operand2;
+    }
+    else if (operation === "BEQ") {
+        if (operand1 === operand2) {
+            return 1;
+        } else {
+            return -1;
         }
-        else if( MUL.includes(operation)){
-            return operand1 * operand2;
-        }
-        else if(DIV.includes(operation)){
-            if (operand2 === 0) {
-                throw new Error("Division by zero is not allowed.");
-            }
-            return operand1 / operand2;
-        }
-        else if(operation === "BEQ"){
-            if (operand1 === operand2){
-                return 1;
-            } else {
-                return -1;
-            }
-        } else if(operation === "BNE"){
-            if(operand1 !== operand2){
-                return 1;
-            } else{
-                return -1;
-            }
+    } else if (operation === "BNE") {
+        if (operand1 !== operand2) {
+            return 1;
+        } else {
+            return -1;
         }
     }
-    
-    
+}
+
+
 
 //---------------------------------------------------------------------------------------------------------
 
@@ -411,14 +413,14 @@ function publishToBus(tag, data) {
     console.log("published", tag, data);
 
     const registerNumber = RegisterFile.findIndex(entry => entry.waiting === tag);
-    if(registerNumber!== -1){
+    if (registerNumber !== -1) {
         // console.log("writing back: ",registerNumber,tag,data);
         writeToRegisterFile(registerNumber, data, 0);
     }
     updateAdderReservationStation(tag, data);
     updateMultiplierReservationStation(tag, data);
     updateStoreBuffer(tag, data);
-    updateBranchReservationStation(tag,data);
+    updateBranchReservationStation(tag, data);
 }
 //---------------------------------------------------------------------------------------------------------
 
@@ -428,24 +430,24 @@ function issueInstruction(cycle) {
     const { operation, operand1, operand2, destination, id } = fetchInstruction();
 
     let issued = false; // Flag to check if the instruction was successfully issued bec reservation station full
-    
-    if(stall !== true){
+
+    if (stall !== true) {
         console.log("ISSUING: ", { operation, operand1, operand2, destination })
         // console.log("operation: ",{ operation, operand1, operand2, destination });
         const qj = fetchFromRegisterFile(operand1).waiting;
         const qk = fetchFromRegisterFile(operand2).waiting;
         const vj = fetchFromRegisterFile(operand1).data;
         const vk = fetchFromRegisterFile(operand2).data;
-        console.log("operand1",operand1);
-        console.log("operand2",operand2);
-        const { waiting, value} = fetchFromRegisterFile(operand2);
-        console.log("vj,qj,vk,qk: ", vj,qj,vk,qk);
+        console.log("operand1", operand1);
+        console.log("operand2", operand2);
+        const { waiting, value } = fetchFromRegisterFile(operand2);
+        console.log("vj,qj,vk,qk: ", vj, qj, vk, qk);
         // Check the operation type and find the appropriate station
-        if ( ADD.includes(operation) || SUB.includes(operation)) {
+        if (ADD.includes(operation) || SUB.includes(operation)) {
             const index = adderReservationStation.findIndex(entry => entry.busy === 0);
             if (index !== -1) {
                 adderReservationStation[index] = {
-                    busy: addLatency+1,
+                    busy: addLatency + 1,
                     operation: operation,
                     Vj: vj,
                     Vk: vk,
@@ -455,13 +457,13 @@ function issueInstruction(cycle) {
                     id: id
                 };
                 issued = true;
-                writeToRegisterFile(destination,-1,"A"+index);
+                writeToRegisterFile(destination, -1, "A" + index);
             }
         } else if (MUL.includes(operation) || DIV.includes(operation)) {
             const index = multiplierReservationStation.findIndex(entry => entry.busy === 0);
             if (index !== -1) {
                 multiplierReservationStation[index] = {
-                    busy: multLatency+1,
+                    busy: multLatency + 1,
                     operation: operation,
                     Vj: vj,
                     Vk: vk,
@@ -471,39 +473,39 @@ function issueInstruction(cycle) {
                     id: id
                 };
                 issued = true;
-                writeToRegisterFile(destination,-1,"M"+index);
+                writeToRegisterFile(destination, -1, "M" + index);
             }
         } else if (LOAD.includes(operation)) {
             const index = loadBuffer.findIndex(entry => entry.busy === 0);
             if (index !== -1) {
-                loadBuffer[index] = { 
-                    busy: loadLatency+1,
-                    operation: operation, 
-                    address: operand1, 
+                loadBuffer[index] = {
+                    busy: loadLatency + 1,
+                    operation: operation,
+                    address: operand1,
                     result: 0,
                     id: id
                 };
                 issued = true;
-                writeToRegisterFile(destination,-1,"L" + index);
+                writeToRegisterFile(destination, -1, "L" + index);
             }
         } else if (STORE.includes(operation)) {
             const index = storeBuffer.findIndex(entry => entry.busy === 0);
             if (index !== -1) {
-                storeBuffer[index] = { 
-                    busy: storeLatency+1, 
-                    operation: operation, 
-                    address: destination, 
-                    V: vj, 
+                storeBuffer[index] = {
+                    busy: storeLatency + 1,
+                    operation: operation,
+                    address: destination,
+                    V: vj,
                     Q: qj,
                     id: id
                 };
                 issued = true;
             }
-        } else if(BRNCH.includes(operation)){
+        } else if (BRNCH.includes(operation)) {
             const index = branchStation.findIndex(entry => entry.busy === 0);
             if (index !== -1) {
                 branchStation[index] = {
-                    busy: branchLatency+1,
+                    busy: branchLatency + 1,
                     operation: operation,
                     Vj: vj,
                     Vk: vk,
@@ -524,7 +526,7 @@ function issueInstruction(cycle) {
         if (issued) {
             InstructionQueue.push({ operation, operand1, operand2, destination, issue: cycle }); // Add it to the queue
             pc++; // Increment the program counter to point to the next instruction
-        } else{
+        } else {
             console.log("FAILED TO ISSUE INSTRUCTION")
         }
     }
@@ -558,7 +560,7 @@ function execute() {
     // Execute instructions in branch Reservation Stations
     for (let i = 0; i < branchStation.length; i++) {
         const station = branchStation[i];
-        if(station.busy>0 && station.Qj === 0 && station.Qk === 0){
+        if (station.busy > 0 && station.Qj === 0 && station.Qk === 0) {
             branchStation[i].busy -= 1; // subtract from busy to simulate execution latency
         }
         if (station.busy === 1 && station.operation !== "") {
@@ -568,7 +570,7 @@ function execute() {
 
         if (station.busy === 0 && station.operation !== "") { // Execution completed
             let result = station.result;
-            if(result === 1){
+            if (result === 1) {
                 pc = station.brnchDestination;
             }
             stall = false;
@@ -584,10 +586,12 @@ function execute() {
         }
         if (buffer.busy === 1 && buffer.address !== -1) {//PROBLEM
             //     console.log("problem")
-            console.log("fetch Inputs: ",buffer.address, buffer.operation);
+            console.log("fetch Inputs: ", buffer.address, buffer.operation);
             const memoryData = fetchFromCache(buffer.address, buffer.operation); // Simulate memory access
-            if(cacheMiss){
-                loadBuffer[i].busy+=cacheMissPenalty;
+            console.log("memoryData: ", memoryData);
+            console.log("cacheMiss: ", cacheMiss);
+            if (cacheMiss) {
+                loadBuffer[i].busy += cacheMissPenalty;
             }
             loadBuffer[i].result = memoryData; // Fetch the data
         }
@@ -633,7 +637,7 @@ function writeBack(cycle) {
         const station = branchStation[i];
         if (station.busy === 0 && station.operation !== "") { // Execution completed
             let result = station.result;
-            if(result === 1){
+            if (result === 1) {
                 pc = station.brnchDestination;
             }
             stall = false;
@@ -675,27 +679,27 @@ function writeBack(cycle) {
     console.log("writeback array: ", writeBackArray);
     console.log("Store writeback array: ", storeWriteBackArray);
 
-    if(storeWriteBackArray.length !== 0){
+    if (storeWriteBackArray.length !== 0) {
         let tempIndex = storeWriteBackArray.reduce((minIndex, current, index, array) => current.id < array[minIndex].id ? index : minIndex, 0);
         let buffer = storeWriteBackArray[tempIndex];
         storeWriteBackArray.splice(tempIndex, 1);
         const { address, V } = buffer;
-        console.log("writing to memory: ",buffer);
+        console.log("writing to memory: ", buffer);
         let cacheIndex = cache.findIndex(cacheEntry => cacheEntry.address === address);
-        if(buffer.operation === "S.D" || buffer.operation === "SD" && V>4294967295){//4294967295
-            console.log("writing to memory: ",buffer);
+        if (buffer.operation === "S.D" || buffer.operation === "SD" && V > 4294967295) {//4294967295
+            console.log("writing to memory: ", buffer);
 
-            memory[address]=4294967295;
-            memory[address+1]=V-4294967295;
-            if(cacheIndex!==-1){
-                cache[cacheIndex]=4294967295;
-                cache[cacheIndex+1]=V-4294967295;
+            memory[address] = 4294967295;
+            memory[address + 1] = V - 4294967295;
+            if (cacheIndex !== -1) {
+                cache[cacheIndex] = 4294967295;
+                cache[cacheIndex + 1] = V - 4294967295;
             }
 
         } else {
-            memory[address]=V;
-            if(cacheIndex!==-1){
-                cache[cacheIndex]=V;
+            memory[address] = V;
+            if (cacheIndex !== -1) {
+                cache[cacheIndex] = V;
             }
         }
         InstructionQueue[buffer.id].writeResult = cycle;
@@ -764,25 +768,25 @@ function main() {
     init(adderResSize, multResSize, loadBufferSize, storeBufferSize, brnchBufferSize, addLatency, multLatency, loadLatency, storeLatency, branchLatency, cacheBlockSize, cachesize);
 
     // Load Instructions
-    // Instructions.push(
-    //     { operation: "L.D", destination: 6, immediate: 0 },      // L.D F6, 0
-    //     { operation: "L.D", destination: 2, immediate: 4 },      // L.D F2, 4
-    //     { operation: "MUL.D", destination: 0, source: 2, target: 4 }, // MUL.D F0, F2, F4
-    //     { operation: "SUB.D", destination: 8, source: 2, target: 6 }, // SUB.D F8, F2, F6
-    //     { operation: "DIV.D", destination: 10, source: 0, target: 6 }, // DIV.D F10, F0, F6
-    //     { operation: "ADD.D", destination: 6, source: 8, target: 2 }, // ADD.D F6, F8, F2
-    //     { operation: "S.D", source: 6, immediate: 0 }          // S.D F6, 0
-    // );
     Instructions.push(
-        { operation: "LW", destination: 6, immediate: 7},      // L.D F6, 0
-        { operation: "S.D", source: 6, immediate: 0 },          // S.D F6, 0
-        // { operation: "ADD.D", destination: 0, source: 1, target: 3 }, // ADD.D F6, F8, F2
-        // { operation: "S.D", source: 0, immediate: 1 }          // S.D F6, 0
+        { operation: "L.D", destination: 6, immediate: 0 },      // L.D F6, 0
+        { operation: "L.D", destination: 2, immediate: 4 },      // L.D F2, 4
+        { operation: "MUL.D", destination: 0, source: 2, target: 4 }, // MUL.D F0, F2, F4
+        { operation: "SUB.D", destination: 8, source: 2, target: 6 }, // SUB.D F8, F2, F6
+        { operation: "DIV.D", destination: 10, source: 0, target: 6 }, // DIV.D F10, F0, F6
+        { operation: "ADD.D", destination: 6, source: 8, target: 2 }, // ADD.D F6, F8, F2
+        { operation: "S.D", source: 6, immediate: 0 }          // S.D F6, 0
     );
-    
+    // Instructions.push(
+    //     { operation: "LW", destination: 6, immediate: 7 },      // L.D F6, 0
+    //     { operation: "S.D", source: 6, immediate: 0 },          // S.D F6, 0
+    //     // { operation: "ADD.D", destination: 0, source: 1, target: 3 }, // ADD.D F6, F8, F2
+    //     // { operation: "S.D", source: 0, immediate: 1 }          // S.D F6, 0
+    // );
+
     // Initialize Memory and Register File
     InitializingMemory(cacheSize); // Memory values at sequential addresses
-    InitializingRegisterFile([0, 20, 1, 2, 3, 4, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0,0]); // Initialize registers F0-F10
+    InitializingRegisterFile([0, 20, 1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]); // Initialize registers F0-F10
     InitializingCache(cacheSize);
     // InitializingCache([-1, -1, -1, -1, -1]);
 
@@ -827,7 +831,7 @@ function main() {
         console.log(" branch station:", branchStation);
         console.log(" Cache:", cache);
         console.log(" PC:", pc);
-        
+
         // console.log(" current instruction:", currInstruction);
 
     }
@@ -846,7 +850,7 @@ async function initializeSimulation(stationSizes, instructionLatencies, instruct
     const { fpAdd, fpMult, load, store, branch } = instructionLatencies;
 
     // Reset all simulation state
-    init(fpAdders, fpMultipliers, loadBuffers, storeBuffers, branchStations, fpAdd, fpMult, load, store, branch, _cache.cacheBlockSize, _cache.cacheSize);
+    init(fpAdders, fpMultipliers, loadBuffers, storeBuffers, branchStations, fpAdd, fpMult, load, store, branch, _cache.blockSize, _cache.cacheSize);
 
     // Load Instructions
     Instructions = instructions;
@@ -913,7 +917,6 @@ async function initializeSimulation(stationSizes, instructionLatencies, instruct
 
 async function advanceCycle(cycle) {
     console.log(`Advancing Cycle`);
-    console.log("CACHE!!!!!!!!!!", cache)
 
     // Execute the three main stages
     execute();
@@ -950,8 +953,8 @@ async function advanceCycle(cycle) {
                     const entry = station[j];
                     if (entry.id === i) {
                         const latency = ADD.includes(instruction.operation) || SUB.includes(instruction.operation) ? addLatency :
-                                        MUL.includes(instruction.operation) || DIV.includes(instruction.operation) ? multLatency :
-                                        LOAD.includes(instruction.operation) ? loadLatency : storeLatency;
+                            MUL.includes(instruction.operation) || DIV.includes(instruction.operation) ? multLatency :
+                                LOAD.includes(instruction.operation) ? loadLatency : storeLatency;
 
                         if (entry.busy === latency && ((entry.Qj === 0 && entry.Qk === 0) || (entry.Q === 0) || LOAD.includes(instruction.operation))) {
                             InstructionQueue[i].execute = `${latency === 1 ? cycle : cycle + "..."}`;
@@ -1012,7 +1015,7 @@ async function advanceCycle(cycle) {
 }
 
 // Run the main method
-main();
+// main();
 
 export {
     initializeSimulation,
